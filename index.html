@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sleeper League Export</title>
+<style>
+  :root { --bg:#eef0f3; --card:#fff; --fg:#1b2438; --muted:#5c6577; --accent:#2a4a8a; --ok:#1f6b52; --bad:#9b1d33; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif; }
+  main { max-width:620px; margin:0 auto; padding:32px 16px; }
+  h1 { font-size:1.5rem; margin:0 0 4px; }
+  p { color:var(--muted); margin:0 0 16px; }
+  .card { background:var(--card); border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  label { font-weight:600; display:block; margin-bottom:6px; }
+  input { width:100%; box-sizing:border-box; font:inherit; padding:10px 12px; border:1px solid #c9cfda; border-radius:8px; }
+  button { font:inherit; font-weight:600; background:var(--accent); color:#fff; border:0; border-radius:8px; padding:12px 18px; margin-top:14px; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  #log { margin-top:16px; font:13px/1.5 ui-monospace,Menlo,Consolas,monospace; color:var(--muted); white-space:pre-wrap; max-height:260px; overflow:auto; }
+  .ok { color:var(--ok); font-weight:600; }
+  .bad { color:var(--bad); font-weight:600; }
+  ol { color:var(--muted); padding-left:20px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Sleeper League Export</h1>
+  <p>Pulls every season of your league from Sleeper into one file for the league app.</p>
+  <div class="card">
+    <label for="lid">Sleeper league ID</label>
+    <input id="lid" value="1384696142750564352" inputmode="numeric">
+    <button id="go">Export league</button>
+    <button id="save" hidden>Save league-export.json</button>
+    <div id="log"></div>
+  </div>
+  <ol>
+    <li>Click <b>Export league</b>. It takes about 30 seconds.</li>
+    <li>Your browser saves a file named <b>league-export.json</b>.</li>
+    <li>Attach that file in your Claude chat.</li>
+  </ol>
+</main>
+<script>
+const API = "https://api.sleeper.app/v1";
+const logEl = document.getElementById("log");
+const log = (msg, cls) => { const d = document.createElement("div"); if (cls) d.className = cls; d.textContent = msg; logEl.appendChild(d); logEl.scrollTop = logEl.scrollHeight; };
+const get = async (path) => {
+  const r = await fetch(API + path);
+  if (!r.ok) throw new Error(path + " returned " + r.status);
+  return r.json();
+};
+const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
+
+async function exportSeason(leagueId, state) {
+  const league = await get(`/league/${leagueId}`);
+  log(`Season ${league.season}: ${league.name}`);
+  const [users, rosters, winners, losers, drafts] = await Promise.all([
+    get(`/league/${leagueId}/users`),
+    get(`/league/${leagueId}/rosters`),
+    get(`/league/${leagueId}/winners_bracket`).catch(() => []),
+    get(`/league/${leagueId}/losers_bracket`).catch(() => []),
+    get(`/league/${leagueId}/drafts`).catch(() => []),
+  ]);
+  const isCurrent = league.season === state.season && league.status !== "complete";
+  let lastWeek = 18;
+  if (isCurrent) {
+    const scored = league.settings && league.settings.last_scored_leg;
+    lastWeek = scored ? scored : Math.max(0, (state.week || 1) - 1);
+  }
+  const weeks = range(1, Math.max(lastWeek, 0));
+  const mRes = await Promise.all(weeks.map(w => get(`/league/${leagueId}/matchups/${w}`).catch(() => [])));
+  const tRes = await Promise.all(range(1, 18).map(w => get(`/league/${leagueId}/transactions/${w}`).catch(() => [])));
+  const matchups = {};
+  weeks.forEach((w, i) => {
+    const rows = mRes[i] || [];
+    if (!rows.some(r => (r.points || 0) > 0)) return;
+    matchups[w] = rows.map(r => ({
+      roster_id: r.roster_id, matchup_id: r.matchup_id, points: r.points,
+      starters: r.starters, starters_points: r.starters_points,
+      players: r.players, players_points: r.players_points,
+    }));
+  });
+  // Remaining regular-season schedule for the current season: pairings only, no scores yet
+  const schedule = {};
+  if (isCurrent) {
+    const pws = (league.settings && league.settings.playoff_week_start) || 15;
+    const future = range(lastWeek + 1, pws - 1);
+    const fRes = await Promise.all(future.map(w => get(`/league/${leagueId}/matchups/${w}`).catch(() => [])));
+    future.forEach((w, i) => { const rows = (fRes[i] || []).filter(r => r.matchup_id != null); if (rows.length) schedule[w] = rows.map(r => ({ roster_id: r.roster_id, matchup_id: r.matchup_id })); });
+  }
+  const transactions = {};
+  tRes.forEach((rows, i) => {
+    const done = (rows || []).filter(t => t.status === "complete");
+    if (done.length) transactions[i + 1] = done.map(t => ({
+      type: t.type, leg: t.leg, created: t.created, roster_ids: t.roster_ids,
+      adds: t.adds, drops: t.drops, settings: t.settings || null,
+      draft_picks: t.draft_picks || [], waiver_budget: t.waiver_budget || [],
+    }));
+  });
+  let draft = null, picks = [];
+  if (drafts.length) {
+    const d = drafts.sort((a, b) => (b.start_time || 0) - (a.start_time || 0))[0];
+    draft = { draft_id: d.draft_id, type: d.type, rounds: d.settings && d.settings.rounds, draft_order: d.draft_order || null, slot_to_roster_id: d.slot_to_roster_id || null };
+    picks = (await get(`/draft/${d.draft_id}/picks`)).map(p => ({
+      round: p.round, pick_no: p.pick_no, draft_slot: p.draft_slot, roster_id: p.roster_id, picked_by: p.picked_by,
+      player_id: p.player_id,
+      name: p.metadata ? `${p.metadata.first_name || ""} ${p.metadata.last_name || ""}`.trim() : "",
+      position: p.metadata && p.metadata.position, team: p.metadata && p.metadata.team,
+    }));
+  }
+  log(`  ${Object.keys(matchups).length} weeks, ${picks.length} draft picks, ${Object.values(transactions).flat().length} moves${isCurrent ? `, ${Object.keys(schedule).length} future weeks of schedule` : ""}`);
+  return {
+    league: {
+      league_id: league.league_id, name: league.name, season: league.season, status: league.status,
+      previous_league_id: league.previous_league_id, total_rosters: league.total_rosters,
+      settings: {
+        playoff_week_start: league.settings && league.settings.playoff_week_start,
+        playoff_teams: league.settings && league.settings.playoff_teams,
+        last_scored_leg: league.settings && league.settings.last_scored_leg,
+      },
+      scoring_rec: league.scoring_settings && league.scoring_settings.rec,
+    },
+    users: users.map(u => ({ user_id: u.user_id, display_name: u.display_name, team_name: (u.metadata && u.metadata.team_name) || "", avatar: u.avatar || null })),
+    rosters: rosters.map(r => ({ roster_id: r.roster_id, owner_id: r.owner_id, co_owners: r.co_owners || null })),
+    matchups, schedule, winners_bracket: winners, losers_bracket: losers, draft, picks, transactions,
+  };
+}
+
+
+// Weekly projections are not in Sleeper's documented API. Try two known undocumented addresses.
+// If neither works, the export still finishes and the app falls back to trade values.
+async function getProjections(state, want) {
+  if (!state || state.season_type !== "regular" || !state.week) { log("  Projections skipped: not the regular season."); return null; }
+  const season = state.season, week = state.week;
+  const urls = [
+    `https://api.sleeper.app/projections/nfl/regular/${season}/${week}`,
+    `https://api.sleeper.com/projections/nfl/${season}/${week}?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF`,
+  ];
+  for (const url of urls) {
+    try {
+      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 20000);
+      const r = await fetch(url, { signal: ctl.signal }); clearTimeout(t);
+      if (!r.ok) { log(`  Projections not at ${new URL(url).host} (${r.status}).`); continue; }
+      const j = await r.json();
+      const pts = {};
+      const take = (pid, st) => { if (!pid || !st) return; const v = st.pts_ppr != null ? st.pts_ppr : null; if (v != null && want.has(String(pid))) pts[String(pid)] = Math.round(v * 100) / 100; };
+      if (Array.isArray(j)) j.forEach(x => take(x.player_id, x.stats));
+      else if (j && typeof j === "object") Object.entries(j).forEach(([pid, st]) => take(pid, st));
+      if (Object.keys(pts).length >= 50) { log(`  Week ${week} projections: ${Object.keys(pts).length} players from ${new URL(url).host}.`, "ok"); return { season, week, source: new URL(url).host, pts }; }
+      log(`  Projections at ${new URL(url).host} came back nearly empty.`);
+    } catch (e) { log(`  Projections not reachable at ${new URL(url).host}.`); }
+  }
+  log("  No projections this time. The app will use trade values instead.");
+  return null;
+}
+
+
+// Inside claude.ai the page saves through the downloads capability; opened on its own it uses a normal download.
+let lastJSON = null, dlPromise = null;
+const saveBtn = document.getElementById("save");
+const getDownloads = () => { if (!dlPromise) dlPromise = (window.claude && window.claude.use) ? window.claude.use("downloads").catch(() => null) : Promise.resolve(null); return dlPromise; };
+saveBtn.addEventListener("click", async () => {
+  const dl = await getDownloads(); if (!dl || !lastJSON) return;
+  try { await dl.save({ filename: "league-export.json", data: lastJSON }); log("Saved. Send league-export.json to Claude.", "ok"); }
+  catch (e) { log(e && e.code === "declined" ? "Save canceled. Tap the button again when ready." : "Save did not work here: " + ((e && e.message) || "unknown error") + ".", "bad"); }
+});
+
+document.getElementById("go").addEventListener("click", async () => {
+  const btn = document.getElementById("go");
+  btn.disabled = true; logEl.textContent = "";
+  try {
+    const state = await get("/state/nfl");
+    const seasons = [];
+    let id = document.getElementById("lid").value.trim();
+    const seen = new Set();
+    while (id && id !== "0" && !seen.has(id) && seasons.length < 15) {
+      seen.add(id);
+      const s = await exportSeason(id, state);
+      seasons.push(s);
+      id = s.league.previous_league_id;
+    }
+    log("Loading player names (large file)...");
+    const want = new Set();
+    for (const s of seasons) {
+      for (const rows of Object.values(s.matchups)) for (const r of rows) (r.players || []).forEach(p => want.add(p));
+      for (const rows of Object.values(s.transactions)) for (const t of rows) { Object.keys(t.adds || {}).forEach(p => want.add(p)); Object.keys(t.drops || {}).forEach(p => want.add(p)); }
+      s.picks.forEach(p => want.add(p.player_id));
+    }
+    const all = await get("/players/nfl");
+    const players = {}, injuries = {};
+    want.forEach(pid => {
+      const p = all[pid];
+      if (!p) return;
+      const name = p.full_name || `${p.first_name || ""} ${p.last_name || ""}`.trim() || pid;
+      players[pid] = [name, p.position || (p.fantasy_positions && p.fantasy_positions[0]) || "", p.team || ""];
+      if (p.injury_status) injuries[pid] = { s: p.injury_status, pr: p.practice_participation || null };
+    });
+    log(`  ${Object.keys(injuries).length} players with an injury status`);
+    const projections = await getProjections(state, want);
+    const out = { format: "ffbc-sleeper-v3", exported: new Date().toISOString(), state: { season: state.season, week: state.week, season_type: state.season_type }, seasons, players, injuries, projections };
+    lastJSON = JSON.stringify(out);
+    const dl = await getDownloads();
+    if (dl) { saveBtn.hidden = false; log("Tap Save league-export.json to keep the file."); }
+    else {
+      const blob = new Blob([lastJSON], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = "league-export.json";
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+    log(`Done. ${seasons.length} seasons, ${Object.keys(players).length} players, ${Object.keys(injuries).length} injury tags, ${projections ? Object.keys(projections.pts).length + " week " + projections.week + " projections" : "no projections"}. File saved as league-export.json.`, "ok");
+  } catch (e) {
+    log("Export stopped: " + e.message + ". Check the league ID and your connection, then try again.", "bad");
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
