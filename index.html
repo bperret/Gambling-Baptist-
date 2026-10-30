@@ -30,7 +30,6 @@
     <input id="lid" value="1384696142750564352" inputmode="numeric">
     <button id="go">Export league</button>
     <button id="save" hidden>Save league-export.json</button>
-    <button id="hist" style="background:#5c6577">Export projection history</button>
     <div id="log"></div>
   </div>
   <ol>
@@ -38,7 +37,6 @@
     <li>Your browser saves a file named <b>league-export.json</b>.</li>
     <li>Attach that file in your Claude chat.</li>
   </ol>
-  <p><b>Projection history</b> is a separate, one-off pull. It gets Sleeper's weekly projections and weekly actual points for every season, about 100 requests, and saves <b>projection-history.json</b>. The normal export does not change.</p>
 </main>
 <script>
 const API = "https://api.sleeper.app/v1";
@@ -119,39 +117,79 @@ async function exportSeason(leagueId, state) {
         last_scored_leg: league.settings && league.settings.last_scored_leg,
       },
       scoring_rec: league.scoring_settings && league.scoring_settings.rec,
+      scoring_settings: league.scoring_settings || null,
     },
     users: users.map(u => ({ user_id: u.user_id, display_name: u.display_name, team_name: (u.metadata && u.metadata.team_name) || "", avatar: u.avatar || null })),
     rosters: rosters.map(r => ({ roster_id: r.roster_id, owner_id: r.owner_id, co_owners: r.co_owners || null })),
+    rosterPlayers: isCurrent ? rosters.flatMap(r => r.players || []) : undefined,
     matchups, schedule, winners_bracket: winners, losers_bracket: losers, draft, picks, transactions,
   };
 }
 
 
-// Weekly projections are not in Sleeper's documented API. Try two known undocumented addresses.
-// If neither works, the export still finishes and the app falls back to trade values.
-async function getProjections(state, want) {
-  if (!state || state.season_type !== "regular" || !state.week) { log("  Projections skipped: not the regular season."); return null; }
-  const season = state.season, week = state.week;
-  const urls = [
-    `https://api.sleeper.app/projections/nfl/regular/${season}/${week}`,
-    `https://api.sleeper.com/projections/nfl/${season}/${week}?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF`,
-  ];
+// Weekly projections are not in Sleeper's documented API. Both addresses below are undocumented.
+// Sleeper archives each finished week, so every export pulls this season's weeks 1 to now.
+// Each projected stat line is scored with the league's own scoring_settings, the way the Sleeper app shows it.
+// Check: actual stat lines for finished weeks are scored the same way and compared with the league's own points.
+const POS = "&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF";
+async function getJSON(urls) {
   for (const url of urls) {
     try {
-      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 20000);
+      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 25000);
       const r = await fetch(url, { signal: ctl.signal }); clearTimeout(t);
-      if (!r.ok) { log(`  Projections not at ${new URL(url).host} (${r.status}).`); continue; }
+      if (!r.ok) continue;
       const j = await r.json();
-      const pts = {};
-      const take = (pid, st) => { if (!pid || !st) return; const v = st.pts_ppr != null ? st.pts_ppr : null; if (v != null && want.has(String(pid))) pts[String(pid)] = Math.round(v * 100) / 100; };
-      if (Array.isArray(j)) j.forEach(x => take(x.player_id, x.stats));
-      else if (j && typeof j === "object") Object.entries(j).forEach(([pid, st]) => take(pid, st));
-      if (Object.keys(pts).length >= 50) { log(`  Week ${week} projections: ${Object.keys(pts).length} players from ${new URL(url).host}.`, "ok"); return { season, week, source: new URL(url).host, pts }; }
-      log(`  Projections at ${new URL(url).host} came back nearly empty.`);
-    } catch (e) { log(`  Projections not reachable at ${new URL(url).host}.`); }
+      if (j && (Array.isArray(j) ? j.length : Object.keys(j).length)) return { j, host: new URL(url).host };
+    } catch (e) {}
   }
-  log("  No projections this time. The app will use trade values instead.");
   return null;
+}
+const statRows = j => Array.isArray(j) ? j.map(x => [String(x.player_id), x.stats || {}]) : Object.entries(j).map(([pid, st]) => [String(pid), st || {}]);
+const scoreLine = (st, sc) => { let t = 0; for (const k in sc) { const v = st[k]; if (typeof v === "number" && typeof sc[k] === "number") t += v * sc[k]; } return Math.round(t * 100) / 100; };
+async function pool(jobs, n) { const out = new Array(jobs.length); let i = 0; await Promise.all(Array.from({ length: n }, async () => { while (i < jobs.length) { const k = i++; out[k] = await jobs[k](); } })); return out; }
+
+async function getProjections(state, cur) {
+  if (!state || state.season_type !== "regular" || !state.week) { log("  Projections skipped: not the regular season."); return null; }
+  const sc = cur && cur.league.scoring_settings;
+  if (!sc) { log("  Projections skipped: no league scoring settings.", "bad"); return null; }
+  const season = state.season, week = state.week;
+  // Players on a roster in each week (the week's matchups), plus current rosters for this week
+  const rostered = {};
+  Object.entries(cur.matchups).forEach(([w, rows]) => { rostered[w] = new Set(rows.flatMap(r => r.players || [])); });
+  const curRost = new Set(Object.values(cur.matchups).flat().flatMap(r => r.players || []));
+  (cur.rosterPlayers || []).forEach(p => curRost.add(p));
+  rostered[week] = curRost;
+  const weeks = range(1, week), done = Object.keys(cur.matchups).map(Number);
+  log(`  Projections: weeks 1 to ${week}, scored with league settings...`);
+  const out = { season, week, source: null, scoring: "league", weeks: {}, pts: {}, check: { n: 0, exact: 0, close: 0, worst: [] }, misses: [] };
+  const jobs = [];
+  weeks.forEach(w => jobs.push(async () => {
+    const res = await getJSON([`https://api.sleeper.com/projections/nfl/${season}/${w}?season_type=regular${POS}`, `https://api.sleeper.app/projections/nfl/regular/${season}/${w}`]);
+    if (!res) { out.misses.push("proj w" + w); return; }
+    out.source = out.source || res.host;
+    const keep = rostered[w] || curRost, P = {};
+    statRows(res.j).forEach(([pid, st]) => { if (keep.has(pid)) P[pid] = scoreLine(st, sc); });
+    out.weeks[w] = P;
+  }));
+  done.forEach(w => jobs.push(async () => {
+    const res = await getJSON([`https://api.sleeper.com/stats/nfl/${season}/${w}?season_type=regular${POS}`, `https://api.sleeper.app/stats/nfl/regular/${season}/${w}`]);
+    if (!res) { out.misses.push("stats w" + w); return; }
+    const A = {}; statRows(res.j).forEach(([pid, st]) => { A[pid] = st; });
+    cur.matchups[w].forEach(r => Object.entries(r.players_points || {}).forEach(([pid, pts]) => {
+      if (!A[pid]) return;
+      const mine = scoreLine(A[pid], sc), d = Math.abs(mine - pts);
+      out.check.n++; if (d < 0.01) out.check.exact++; if (d <= 0.1) out.check.close++;
+      if (d >= 0.01) out.check.worst.push([+w, pid, pts, mine]);
+    }));
+  }));
+  await pool(jobs, 4);
+  out.check.worst = out.check.worst.sort((a, b) => Math.abs(b[2] - b[3]) - Math.abs(a[2] - a[3])).slice(0, 25);
+  out.pts = out.weeks[week] || {};
+  const c = out.check, rate = c.n ? c.exact / c.n : 0;
+  log(`  Projections for ${Object.keys(out.weeks).length} weeks, ${Object.keys(out.pts).length} players this week.`, Object.keys(out.weeks).length ? "ok" : "bad");
+  log(`  Scoring check: ${c.exact} of ${c.n} player-weeks match the league's points exactly (${(rate * 100).toFixed(1)}%).`, rate >= 0.98 ? "ok" : "bad");
+  if (out.misses.length) log("  Missing: " + out.misses.join(", "), "bad");
+  return Object.keys(out.weeks).length ? out : null;
 }
 
 
@@ -175,73 +213,9 @@ async function saveFile(name, json) {
   document.body.appendChild(a); a.click(); a.remove();
 }
 
-// ---------- Projection history (one-off) ----------
-// Both addresses are undocumented. For each season and week it keeps PPR projected and actual points,
-// any timestamp the projection record carries (to tell pre-game numbers from revised ones), and a few raw records.
-const POS = "&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF";
-async function getJSON(urls) {
-  for (const url of urls) {
-    try {
-      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 25000);
-      const r = await fetch(url, { signal: ctl.signal }); clearTimeout(t);
-      if (!r.ok) continue;
-      const j = await r.json();
-      if (j && (Array.isArray(j) ? j.length : Object.keys(j).length)) return { j, host: new URL(url).host };
-    } catch (e) {}
-  }
-  return null;
-}
-const entries = j => Array.isArray(j) ? j.map(x => [String(x.player_id), x]) : Object.entries(j).map(([pid, st]) => [String(pid), { stats: st }]);
-const TS = ["updated_at", "last_modified", "date"];
-async function pool(jobs, n) { const out = new Array(jobs.length); let i = 0; await Promise.all(Array.from({ length: n }, async () => { while (i < jobs.length) { const k = i++; out[k] = await jobs[k](); } })); return out; }
-
-document.getElementById("hist").addEventListener("click", async () => {
-  const btn = document.getElementById("hist"), go = document.getElementById("go");
-  btn.disabled = true; go.disabled = true; saveBtn.hidden = true; logEl.textContent = "";
-  try {
-    const state = await get("/state/nfl");
-    const chain = []; let id = document.getElementById("lid").value.trim(); const seen = new Set();
-    while (id && id !== "0" && !seen.has(id) && chain.length < 15) { seen.add(id); const L = await get(`/league/${id}`); chain.push(L); id = L.previous_league_id; }
-    const out = { format: "ffbc-proj-history-v1", exported: new Date().toISOString(), state: { season: state.season, week: state.week, season_type: state.season_type }, seasons: {}, samples: {}, tsFields: {}, misses: [] };
-    for (const L of chain) {
-      const yr = String(L.season), cur = yr === String(state.season) && L.status !== "complete";
-      const projWeeks = range(1, cur ? (state.week || 1) : 18), actWeeks = cur ? range(1, Math.max(0, (state.week || 1) - 1)) : range(1, 18);
-      log(`Season ${yr}: projections for weeks 1 to ${projWeeks.length}, actuals for weeks 1 to ${actWeeks.length}...`);
-      const S = out.seasons[yr] = { weeks: {} };
-      const jobs = [];
-      projWeeks.forEach(w => jobs.push(async () => {
-        const res = await getJSON([`https://api.sleeper.com/projections/nfl/${yr}/${w}?season_type=regular${POS}`, `https://api.sleeper.app/projections/nfl/regular/${yr}/${w}`]);
-        if (!res) { out.misses.push(`proj ${yr} w${w}`); return; }
-        const W = S.weeks[w] || (S.weeks[w] = {}); W.proj = {}; W.projHost = res.host;
-        const es = entries(res.j);
-        if (!out.samples.proj) out.samples.proj = es.slice(0, 3).map(e => e[1]);
-        es.forEach(([pid, x]) => { const st = x.stats || {}; if (st.pts_ppr == null) return; const ts = TS.map(k => x[k] != null ? x[k] : null); TS.forEach((k, i) => { if (ts[i] != null) out.tsFields[k] = true; }); W.proj[pid] = [Math.round(st.pts_ppr * 100) / 100, ...ts]; });
-      }));
-      actWeeks.forEach(w => jobs.push(async () => {
-        const res = await getJSON([`https://api.sleeper.com/stats/nfl/${yr}/${w}?season_type=regular${POS}`, `https://api.sleeper.app/stats/nfl/regular/${yr}/${w}`]);
-        if (!res) { out.misses.push(`act ${yr} w${w}`); return; }
-        const W = S.weeks[w] || (S.weeks[w] = {}); W.act = {}; W.actHost = res.host;
-        const es = entries(res.j);
-        if (!out.samples.act) out.samples.act = es.slice(0, 3).map(e => e[1]);
-        es.forEach(([pid, x]) => { const st = x.stats || {}; if (st.pts_ppr != null) W.act[pid] = Math.round(st.pts_ppr * 100) / 100; });
-      }));
-      await pool(jobs, 4);
-      const wk = Object.values(S.weeks);
-      log(`  ${wk.filter(x => x.proj).length} weeks of projections, ${wk.filter(x => x.act).length} weeks of actuals.`, wk.length ? "ok" : "bad");
-    }
-    out.tsFields = Object.keys(out.tsFields);
-    out.fields = ["pts_ppr", ...TS];
-    log(`Timestamp fields found: ${out.tsFields.join(", ") || "none"}.${out.misses.length ? " Missing: " + out.misses.length + " week pulls." : ""}`);
-    await saveFile("projection-history.json", JSON.stringify(out));
-    log("Done. File saved as projection-history.json.", "ok");
-  } catch (e) {
-    log("Projection history stopped: " + e.message + ".", "bad");
-  } finally { btn.disabled = false; go.disabled = false; }
-});
-
 document.getElementById("go").addEventListener("click", async () => {
   const btn = document.getElementById("go");
-  btn.disabled = true; logEl.textContent = "";
+  btn.disabled = true; logEl.textContent = ""; saveBtn.hidden = true;
   try {
     const state = await get("/state/nfl");
     const seasons = [];
@@ -259,6 +233,7 @@ document.getElementById("go").addEventListener("click", async () => {
       for (const rows of Object.values(s.matchups)) for (const r of rows) (r.players || []).forEach(p => want.add(p));
       for (const rows of Object.values(s.transactions)) for (const t of rows) { Object.keys(t.adds || {}).forEach(p => want.add(p)); Object.keys(t.drops || {}).forEach(p => want.add(p)); }
       s.picks.forEach(p => want.add(p.player_id));
+      (s.rosterPlayers || []).forEach(p => want.add(p));
     }
     const all = await get("/players/nfl");
     const players = {}, injuries = {};
@@ -270,10 +245,12 @@ document.getElementById("go").addEventListener("click", async () => {
       if (p.injury_status) injuries[pid] = { s: p.injury_status, pr: p.practice_participation || null };
     });
     log(`  ${Object.keys(injuries).length} players with an injury status`);
-    const projections = await getProjections(state, want);
+    const cur = seasons.find(s => String(s.league.season) === String(state.season));
+    const projections = await getProjections(state, cur);
+    seasons.forEach(s => { delete s.rosterPlayers; });
     const out = { format: "ffbc-sleeper-v3", exported: new Date().toISOString(), state: { season: state.season, week: state.week, season_type: state.season_type }, seasons, players, injuries, projections };
     await saveFile("league-export.json", JSON.stringify(out));
-    log(`Done. ${seasons.length} seasons, ${Object.keys(players).length} players, ${Object.keys(injuries).length} injury tags, ${projections ? Object.keys(projections.pts).length + " week " + projections.week + " projections" : "no projections"}. File saved as league-export.json.`, "ok");
+    log(`Done. ${seasons.length} seasons, ${Object.keys(players).length} players, ${Object.keys(injuries).length} injury tags, ${projections ? Object.keys(projections.weeks).length + " weeks of projections" : "no projections"}. File saved as league-export.json.`, "ok");
   } catch (e) {
     log("Export stopped: " + e.message + ". Check the league ID and your connection, then try again.", "bad");
   } finally {
