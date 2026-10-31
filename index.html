@@ -144,6 +144,8 @@ async function getJSON(urls) {
   }
   return null;
 }
+// Usage fields kept per player-week: [short name, Sleeper stat key]. rzt (red zone targets) stays null when Sleeper does not send it.
+const U_FIELDS = [["team", "team"], ["gp", "gp"], ["tgt", "rec_tgt"], ["rec", "rec"], ["air", "rec_air_yd"], ["att", "rush_att"], ["rz", "rush_rz_att"], ["snp", "off_snp"], ["tsnp", "tm_off_snp"], ["patt", "pass_att"], ["rectd", "rec_td"], ["rushtd", "rush_td"], ["passtd", "pass_td"], ["rzt", "rec_rz_tgt"]];
 const statRows = j => Array.isArray(j) ? j.map(x => [String(x.player_id), x.stats || {}]) : Object.entries(j).map(([pid, st]) => [String(pid), st || {}]);
 const scoreLine = (st, sc) => { let t = 0; for (const k in sc) { const v = st[k]; if (typeof v === "number" && typeof sc[k] === "number") t += v * sc[k]; } return Math.round(t * 100) / 100; };
 async function pool(jobs, n) { const out = new Array(jobs.length); let i = 0; await Promise.all(Array.from({ length: n }, async () => { while (i < jobs.length) { const k = i++; out[k] = await jobs[k](); } })); return out; }
@@ -162,6 +164,8 @@ async function getProjections(state, cur) {
   const weeks = range(1, week), done = Object.keys(cur.matchups).map(Number);
   log(`  Projections: weeks 1 to ${week}, scored with league settings...`);
   const out = { season, week, source: null, scoring: "league", weeks: {}, act: {}, pts: {}, check: { n: 0, exact: 0, close: 0, worst: [] }, misses: [] };
+  // Usage lines for finished weeks: one compact array per player who saw the field
+  out.usage = { fields: U_FIELDS.map(f => f[0]), weeks: {} };
   const jobs = [];
   weeks.forEach(w => jobs.push(async () => {
     const res = await getJSON([`https://api.sleeper.com/projections/nfl/${season}/${w}?season_type=regular${POS}`, `https://api.sleeper.app/projections/nfl/regular/${season}/${w}`]);
@@ -176,6 +180,9 @@ async function getProjections(state, cur) {
     const res = await getJSON([`https://api.sleeper.com/stats/nfl/${season}/${w}?season_type=regular${POS}`, `https://api.sleeper.app/stats/nfl/regular/${season}/${w}`]);
     if (!res) { out.misses.push("stats w" + w); return; }
     const A = {}; statRows(res.j).forEach(([pid, st]) => { A[pid] = st; });
+    const U = {};
+    (Array.isArray(res.j) ? res.j : []).forEach(x => { const st = x.stats || {}; if (!(st.off_snp > 0 || st.rec_tgt > 0 || st.rush_att > 0 || st.pass_att > 0)) return; U[String(x.player_id)] = U_FIELDS.map(([k, src]) => k === "team" ? (x.team || null) : st[src] == null ? (k === "rzt" ? null : 0) : st[src]); });
+    out.usage.weeks[w] = U;
     // Every player's actual points, scored with league settings (free agents included)
     const act = {}; Object.entries(A).forEach(([pid, st]) => { const v = scoreLine(st, sc); if (v !== 0 || (rostered[w] && rostered[w].has(pid))) act[pid] = v; });
     out.act[w] = act;
@@ -235,7 +242,7 @@ document.getElementById("go").addEventListener("click", async () => {
     const projections = await getProjections(state, cur);
     log("Loading player names (large file)...");
     const want = new Set();
-    if (projections) [projections.weeks, projections.act].forEach(m => Object.values(m).forEach(W => Object.keys(W).forEach(p => want.add(p))));
+    if (projections) [projections.weeks, projections.act, projections.usage ? projections.usage.weeks : {}].forEach(m => Object.values(m).forEach(W => Object.keys(W).forEach(p => want.add(p))));
     for (const s of seasons) {
       for (const rows of Object.values(s.matchups)) for (const r of rows) (r.players || []).forEach(p => want.add(p));
       for (const rows of Object.values(s.transactions)) for (const t of rows) { Object.keys(t.adds || {}).forEach(p => want.add(p)); Object.keys(t.drops || {}).forEach(p => want.add(p)); }
