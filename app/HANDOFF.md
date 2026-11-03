@@ -74,5 +74,5 @@ The commissioner sends the export JSON (or uses the drop zone), Fantasy Spew and
 - **Reply style:** direct and concise, no flattery. Push back when warranted. Never end with a question. Cite sources for product or capability claims, or say "not certain, let me check." No em dashes, plain technical English.
 
 ## Open items
-- **Testimonies:** live with 7 Week 8 notes. The rest of the original dump was not saved.
+- **Testimonies:** live with the full Week 8 dump. Team-only notes and players off rosters are left out. Rosters come from the latest scored week, as in the app.
 - No 2026 trade has involved three or more teams, so multi-team scoring has only been tested on a made-up trade.

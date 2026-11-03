@@ -4,36 +4,388 @@
 "source": "Late-Round",
 "notes": [
 {
+"pid": "12501",
+"text": "Averaging 19.8 Expected Fantasy Points a game and running 3.3 points a game under that. Over his last three, he is at 25.4 Expected Fantasy Points.",
+"tag": "fast"
+},
+{
+"pid": "5850",
+"text": "70% snap rate on Thursday night, the first time a Green Bay back has topped 60% in a game this year. His 81% rush share beat the team's previous high of 62%.",
+"tag": "call"
+},
+{
+"pid": "7594",
+"text": "Target shares of 17% and 23% over his last two games, after staying under 10% in each of his first five.",
+"tag": "call"
+},
+{
+"pid": "12526",
+"text": "10.6 Standard PPR points a game with Jalen Coker this year, 45.2 without him."
+},
+{
+"pid": "11646",
+"text": "17, 17, 7, and 23 Expected Fantasy Points in his first four games, then 7.0 and 7.3 over his last two.",
+"tag": "pew"
+},
+{
+"pid": "8112",
+"text": "A 96% route share and 26% target share against the Bucs turned into 1 catch for 8 yards, his lowest output with Michael Penix starting.",
+"tag": "fast"
+},
+{
+"pid": "9509",
+"text": "Under 8 Standard PPR points in two of his last three games. That happened in just one fantasy-relevant game last year."
+},
+{
+"pid": "7553",
+"text": "Under a 10% target share in each of his first three games, then 15% or better in each of his last five, including 22% against the Bucs.",
+"tag": "call"
+},
+{
+"pid": "4037",
+"text": "A 43% target share over the last two games came to just six targets. Tampa Bay completed seven passes in that stretch and none on Sunday.",
+"tag": "fast"
+},
+{
+"pid": "11584",
+"text": "20 or more Standard PPR points in three of five games with Baker Mayfield. With Mayfield: 56% rush share, 16% target share. Without him: 57% and 6.4%."
+},
+{
+"pid": "4983",
+"text": "Led Buffalo with an 87% route share, the highest single-game mark by any Bills player this season, plus a 21% target share.",
+"tag": "call"
+},
+{
+"pid": "10236",
+"text": "A 57% route share in Week 8, just the second time this season under 60%. He still ranks first in yards per route run among the 38 tight ends with 100 or more routes.",
+"tag": "pew"
+},
+{
+"pid": "9997",
+"text": "A 97% route share and 19% target share (5 targets) with no catches, the first catchless game of his career.",
+"tag": "fast"
+},
+{
+"pid": "3198",
+"text": "Under 15 Standard PPR points in three straight games, after 15 or more in each of his first five. Yards before contact per attempt has been under 1.0 in all three."
+},
+{
+"pid": "6770",
+"text": "13 passing touchdowns over his last three games. The Bengals have two rushing touchdowns in that stretch, and he has one of them."
+},
+{
+"pid": "9224",
+"text": "Played 71% of snaps and took 63% of the rush attempts, his second-highest share of the season. His 19% target share was the sixth time this year at 16% or better.",
+"tag": "call"
+},
+{
+"pid": "6801",
+"text": "21 or more Standard PPR points in four of his last five games. Since the end of Week 2, only Jaxon Smith-Njigba and Puka Nacua average more a game."
+},
+{
+"pid": "6801",
+"text": "He and Ja'Marr Chase both have 61 targets. Higgins has 726 receiving yards, Chase 492."
+},
+{
+"pid": "7564",
+"text": "He and Tee Higgins both have 61 targets. Chase has 492 receiving yards, Higgins 726."
+},
+{
 "pid": "5967",
-"text": "Snap shares of 76%, 74%, and 80%, after a 55% peak in his first five games.",
+"text": "Snap shares of 76%, 74%, and 80% over his last three games, mostly without Tyjae Spears. He maxed out at 55% in the five games before that.",
+"tag": "call"
+},
+{
+"pid": "8126",
+"text": "Led Titans pass catchers with a 91% route share without Carnell Tate.",
+"tag": "call"
+},
+{
+"pid": "13287",
+"text": "Last snap against Dallas came at the end of the first quarter. In that quarter, he out-snapped Tyler Allgeier 13 to 4 and had 9 rushes to 2."
+},
+{
+"pid": "8132",
+"text": "Out-snapped 13 to 4 by Jeremiyah Love in the first quarter and 16 to 4 by Bam Knight in the second, before both left."
+},
+{
+"pid": "10232",
+"text": "A 38% target share with Jacoby Brissett under center on Sunday and 35% with Gardner Minshew."
+},
+{
+"pid": "8130",
+"text": "A 9.5% target share with Jacoby Brissett on Sunday and 30% with Gardner Minshew."
+},
+{
+"pid": "3257",
+"text": "11.6 air yards per attempt before his benching, pacing to his highest rate of the season."
+},
+{
+"pid": "7588",
+"text": "25 and 24 rush attempts over the last two weeks, after never topping 20 in a game before that. Sunday was his first game without a touchdown since Week 2.",
 "tag": "call"
 },
 {
 "pid": "8137",
-"text": "Season-low 62% route share.",
+"text": "A season-low 62% route share against the Cardinals led to a 14% target share, his second lowest of the season.",
+"tag": "pew"
+},
+{
+"pid": "8408",
+"text": "A 63% snap share and 56% rush share in Week 7, then 28% and 47% in Week 8.",
+"tag": "pew"
+},
+{
+"pid": "9756",
+"text": "A 29% target share against the Lions, his first time above 20% since Week 3. His 11.6 Standard PPR points were his second-highest mark of the season.",
+"tag": "call"
+},
+{
+"pid": "5849",
+"text": "No 20-point game yet this year, with 19.9 Standard PPR points against the Lions. Week 8 was his first game with more than one touchdown and his first above 9.0 air yards per attempt."
+},
+{
+"pid": "5844",
+"text": "Out of 38 qualified tight ends, only George Kittle has more Standard PPR points per route run."
+},
+{
+"pid": "4217",
+"text": "Leads the 38 qualified tight ends in Standard PPR points per route run."
+},
+{
+"pid": "8148",
+"text": "Target shares of 29% and 24% over his last two, after four straight games under 16%. He has six end-zone targets over his last four games.",
+"tag": "call"
+},
+{
+"pid": "10859",
+"text": "2.8 and 6.5 Standard PPR points over his last two, the lowest of his season, but his target share jumped from 6.5% in Week 7 to 20% in Week 8.",
+"tag": "fast"
+},
+{
+"pid": "3163",
+"text": "9.0 Standard PPR points against the Vikings, his lowest since facing them in Week 17 last season."
+},
+{
+"pid": "12527",
+"text": "Rush share by week: 67.6%, 80.8%, 76.0%, 57.7%, 55.6%, 50.0%, 47.1%, and 6.5% in Week 8.",
+"tag": "pew"
+},
+{
+"pid": "12527",
+"text": "9 goal-line rushes this season and 1 goal-line touchdown."
+},
+{
+"pid": "11604",
+"text": "A 40% target share in Week 8, the second time this season he has hit at least 40%.",
+"tag": "call"
+},
+{
+"pid": "10213",
+"text": "Season lows against the Jets: a 4% target share on a 59% route share.",
+"tag": "pew"
+},
+{
+"pid": "11576",
+"text": "Since the Breece Hall injury: 84% snap share, 80% rush share, 5.4 yards per carry, 60% route share, 13% target share, 16.5 Standard PPR points and 14.9 Expected Fantasy Points a game.",
+"tag": "call"
+},
+{
+"pid": "13276",
+"text": "Ran 26 routes, a 74% route share, and saw no targets. Adonai Mitchell ran the same number and saw 9.",
+"tag": "pew"
+},
+{
+"pid": "8146",
+"text": "A 39% target share in Week 8, after a season-low 10% in Week 7."
+},
+{
+"pid": "7021",
+"text": "No targets in Week 8 after games of 4 and 6. His route share was 28%, down from 53% the week before and up from 13.5% in Week 6.",
+"tag": "pew"
+},
+{
+"pid": "8228",
+"text": "15.9 Standard PPR points a game over the last three with Rico Dowdle back, with 3 goal-line rushes to Dowdle's 1."
+},
+{
+"pid": "8228",
+"text": "5.9% of his rush attempts have gone 20 or more yards, the best among running backs with 30 or more carries."
+},
+{
+"pid": "5846",
+"text": "A 27% target share on Sunday and just 1 catch. He is one of five players this year with a 25%+ target share and 1 or fewer catches in a game.",
+"tag": "fast"
+},
+{
+"pid": "13274",
+"text": "Target shares of 30%, 27%, 18%, and 23% over his last four games, with 154 yards after the catch, more than double any Steelers wide receiver or tight end.",
+"tag": "call"
+},
+{
+"pid": "13298",
+"text": "A 10% target share against Pittsburgh, his lowest in a completed game this year. He tied Harold Fannin in route share.",
+"tag": "pew"
+},
+{
+"pid": "12506",
+"text": "Led Cleveland with a 30% target share against Pittsburgh.",
+"tag": "call"
+},
+{
+"pid": "13346",
+"text": "6 catches for 37 yards on a 27.5% target share. He had 23.7 Expected Fantasy Points and 9.7 Standard PPR points, the biggest shortfall at wide receiver this week.",
+"tag": "fast"
+},
+{
+"pid": "12512",
+"text": "A season-low 8 routes, a 16% route share. His target shares are 3% and 5% over the last two weeks with Dylan Sampson back.",
 "tag": "pew"
 },
 {
 "pid": "12490",
-"text": "27.3 Standard PPR points a game on 12.1 Expected Fantasy Points.",
+"text": "11.2 Expected Fantasy Points and 29.9 Standard PPR points in Week 8. Over his last two games, he averages 27.3 Standard PPR points on 12.1 Expected Fantasy Points.",
 "tag": "manna"
 },
 {
-"pid": "13346",
-"text": "23.7 Expected Fantasy Points, 9.7 Standard PPR points scored.",
+"pid": "9487",
+"text": "Led Jacksonville with a 73% route share, 79% through three quarters, but saw just a 12% target share."
+},
+{
+"pid": "9500",
+"text": "12.3 Standard PPR points in Week 8, his first time above 9.0 since Week 3."
+},
+{
+"pid": "12518",
+"text": "Just 5.8 Standard PPR points against the Jags on a season-high 33% target share.",
 "tag": "fast"
 },
 {
-"pid": "9997",
-"text": "His first catchless game."
+"pid": "6813",
+"text": "A 79% snap share and 18% target share with Daniel Jones under center in Week 8, plus 8 rush attempts to Seth McGowan's 4."
 },
 {
-"pid": "12526",
-"text": "45.2 Standard PPR points a game without Jalen Coker."
+"pid": "12507",
+"text": "18 backfield snaps in Week 8, to Kimani Vidal's 26 and Keaton Mitchell's 19."
 },
 {
-"pid": "12527",
-"text": "6.5% rush share.",
+"pid": "11635",
+"text": "Back in Week 8 and led the Chargers with an 89% route share and a 20% target share. His 2.33 yards per route run is top 20 among wideouts with 100+ routes.",
+"tag": "call"
+},
+{
+"pid": "421",
+"text": "Under 10 Standard PPR points in three separate games this year. That happened once last year."
+},
+{
+"pid": "8150",
+"text": "Out-snapped Blake Corum 36 to 17 on Sunday and 169 to 83 over their last four games, but trails him 15.2 to 15.1 in Standard PPR points a game in that stretch.",
+"tag": "fast"
+},
+{
+"pid": "11586",
+"text": "Out-snapped 169 to 83 by Kyren Williams over their last four games, but leads him 15.2 to 15.1 in Standard PPR points a game.",
+"tag": "manna"
+},
+{
+"pid": "9493",
+"text": "A 48% target share against the Chargers, and 41% over the last two games without Davante Adams.",
+"tag": "call"
+},
+{
+"pid": "13345",
+"text": "Played 68% of Denver's snaps without RJ Harvey, to JK Dobbins' 21%. He ran 16 routes to Dobbins' 2 and had a 17% target share.",
+"tag": "call"
+},
+{
+"pid": "13345",
+"text": "On the season: 47% success rate, 17% 10+ yard run rate, and 3.10 yards after contact per attempt. JK Dobbins is at 26%, 5%, and 2.34."
+},
+{
+"pid": "6806",
+"text": "A 21% snap share to Jonah Coleman's 68%, with RJ Harvey out, and 2 routes to Coleman's 16.",
+"tag": "pew"
+},
+{
+"pid": "11563",
+"text": "3.0 air yards per attempt in Week 8, his lowest of the season, after 11.1 in Week 7. Over 56% of his throws went 2 or fewer air yards against the Chiefs."
+},
+{
+"pid": "7526",
+"text": "Led the team with a 21% target share on just a 53% route share."
+},
+{
+"pid": "4046",
+"text": "No completions of 20 or more air yards in three straight games."
+},
+{
+"pid": "13337",
+"text": "A season-high 25.3 Standard PPR points on Sunday on just 13 snaps. Kenneth Walker played 54 snaps and scored 12.4.",
+"tag": "manna"
+},
+{
+"pid": "8151",
+"text": "13 goal-line attempts this year, sixth most among running backs, and two touchdowns on them.",
+"tag": "fast"
+},
+{
+"pid": "10229",
+"text": "Ran a route on 61% of Kansas City's drop backs in his return, after topping 70% in his three completed games. He still saw a 21% target share."
+},
+{
+"pid": "11624",
+"text": "No game of 15 or more Standard PPR points since Week 4 of the 2025 season."
+},
+{
+"pid": "7611",
+"text": "With TreVeyon Henderson out, he played 76% of the snaps and saw a 16% target share. Corey Kiner played 11 snaps to his 45 and ran 2 routes.",
+"tag": "call"
+},
+{
+"pid": "3214",
+"text": "Hurt against the Dolphins and played just 8 snaps."
+},
+{
+"pid": "13296",
+"text": "31 routes and 6 targets in Week 8, the most routes among Miami wide receivers."
+},
+{
+"pid": "11610",
+"text": "27 routes and 6 targets in Week 8."
+},
+{
+"pid": "12495",
+"text": "50 snaps to Jaylen Wright's 7, with an 83% rush share and 73% route share. A back has hit 80% and 70% just three times this season.",
+"tag": "call"
+},
+{
+"pid": "8210",
+"text": "26 routes without Terry McLaurin, second on Washington."
+},
+{
+"pid": "2449",
+"text": "25 routes without Terry McLaurin."
+},
+{
+"pid": "8136",
+"text": "Led Washington's backfield with 27 snaps, 11 rushes, 13 routes, and 3 targets."
+},
+{
+"pid": "11566",
+"text": "First in the NFL in scrambles per game at 4.2, and second behind Josh Allen with 7.1 rushing points a game."
+},
+{
+"pid": "9230",
+"text": "Has thrown 20 or more air yards on 7% of his attempts this year and is 0 for 8 on those passes."
+},
+{
+"pid": "5022",
+"text": "A 58% route share, his lowest in a completed game this year.",
+"tag": "pew"
+},
+{
+"pid": "4866",
+"text": "22 snaps to Elijah Mitchell's 38 and 6 routes to Mitchell's 19, with 13 rushes to 11. He had 13.1 Expected Fantasy Points, Mitchell 12.0.",
 "tag": "pew"
 }
 ]
