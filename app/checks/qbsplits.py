@@ -20,10 +20,10 @@ for tm,R in o.items():
         q=sorted(t['q'],key=lambda x:-x[0])
         if not q or (len(q)>1 and q[1][0]>=10):continue
         by.setdefault(q[0][1],[]).append(w)
-    assert sorted(R['qbs'])==sorted(k for k,v in by.items() if len(v)>=2) or len([k for k,v in by.items() if len(v)>=2])>3,(tm,R['qbs'])
+    assert len(by)>=2 and (sorted(R['qbs'])==sorted(by) or len(by)>3),(tm,R['qbs'])
     for r in R['rows']:
         for qb,c in zip(R['qbs'],r['cells']):
             G=[x for x in L[r['pid']] if x[1]==tm and x[0] in by[qb]];n+=1
-            e=(sum(x[2] for x in G)/sum(T[tm][x[0]]['tgt'] for x in G)) if len(G)>=2 else None
+            e=(sum(x[2] for x in G)/sum(T[tm][x[0]]['tgt'] for x in G)) if G and sum(T[tm][x[0]]['tgt'] for x in G) else None
             if (e is None)!=(c is None) or (e is not None and abs(e-c)>1e-9):bad+=1;print('DIFF',tm,r,qb,e,c)
 print('teams',len(o),'cells',n,'mismatches',bad)
