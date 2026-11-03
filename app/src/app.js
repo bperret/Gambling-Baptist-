@@ -1,5 +1,5 @@
 
-const DYK_SEED = 25;
+const DYK_SEED = 26;
 // League model built from the export file. Pure functions, no DOM.
 // Trades reversed within 48 hours: the later trade's adds are the earlier trade's drops, and the other way around
 function reversedTrades(txs) {
@@ -1743,6 +1743,36 @@ function wTeam(W, tm) {
       (A, n, p) => `${n} put up ${p} for ${A}. Put him on the nominating committee.`,
       (A, n, p) => `${n} went for ${p} for ${A}. The whole pew stood up.`,
     ],
+    prodigal: [
+      (A, B, n, p, wk) => `${A} dropped ${n} in Week ${wk}. ${n} just gave ${B} ${p}. The prodigal did not come home.`,
+      (A, B, n, p, wk) => `${n} scored ${p} for ${B}. ${A} let him walk in Week ${wk}. Some sheep do not come back.`,
+      (A, B, n, p, wk) => `${B} got ${p} from ${n}, the same man ${A} dropped in Week ${wk}. That receipt is still on file.`,
+      (A, B, n, p, wk) => `${A} let ${n} go in Week ${wk}. ${B} is thankful: ${p} this week.`,
+    ],
+    prophet: [
+      (A, n, pr, ac) => `${n} was projected for ${pr} and scored ${ac} for ${A}. The prophets did not see that coming.`,
+      (A, n, pr, ac) => `Sleeper said ${pr}. ${n} said ${ac}. ${A} is not complaining.`,
+      (A, n, pr, ac) => `${A} started ${n} for ${pr} and got ${ac}. Exceeding abundantly.`,
+      (A, n, pr, ac) => `${n} beat his ${pr} projection with ${ac} for ${A}. Somebody update the prophecy.`,
+    ],
+    falseprophet: [
+      (A, n, pr, ac) => `${n} was projected for ${pr} and scored ${ac} for ${A}. Test the prophets.`,
+      (A, n, pr, ac) => `Sleeper promised ${A} ${pr} from ${n}. He delivered ${ac}. False prophet.`,
+      (A, n, pr, ac) => `${A} trusted ${n} for ${pr} and got ${ac}. Put not your trust in projections.`,
+      (A, n, pr, ac) => `${n} gave ${A} ${ac} against a projection of ${pr}. Beware of false prophets.`,
+    ],
+    elo: [
+      (A, d) => `${A} gained ${d} Elo points, the biggest climb of the week. Moving up the pews.`,
+      (A, d) => `${A} added ${d} to his Elo rating. The deacons have noticed.`,
+      (A, d) => `${A} climbed ${d} Elo points this week. Up to the front row.`,
+      (A, d) => `${d} Elo points for ${A}, the week's biggest gain. Somebody save him a seat.`,
+    ],
+    rivalry: [
+      (A, B, n) => `${A} finally beat ${B}, ending a ${n}-game skid in the series. Patience is a fruit of the Spirit.`,
+      (A, B, n) => `${A} had lost ${n} straight to ${B}. Not anymore. Let the church say amen.`,
+      (A, B, n) => `${B} had beaten ${A} ${n} straight. That streak is over. The walls of Jericho came down too.`,
+      (A, B, n) => `After ${n} straight losses to ${B}, ${A} got one back. Forty years in the wilderness felt shorter.`,
+    ],
     // Joined stories: two facts about the same team or game, told once
     hp: [
       (A, n, p, v) => `${A} put up ${p}, and ${v} of it came from ${n}. The choir stood up for that one.`,
@@ -1812,11 +1842,25 @@ function wTeam(W, tm) {
     lucky: [F => `${F} Will Take It`, () => `Undeserved and Unbothered`, () => `Ugly Wins Count Too`, F => `Mercy for ${F}`],
     regret: [() => `The Wrong Man Started`, () => `A Lineup Confession`, () => `The Deacons Reviewed the Tape`, () => `Pride Goes Before a Fall`],
     asleep: [() => `Wake Up, Brother`, () => `Asleep in the Pew`, () => `Talents in the Ground`, () => `The Usher Has Questions`],
+    prodigal: [() => `The One That Got Away`, () => `The Prodigal Did Not Come Home`, () => `Check the Waiver Receipts`, () => `Some Sheep Do Not Come Back`],
+    prophet: [() => `Nobody Projected That`, () => `The Prophets Missed This One`, () => `Exceeding Abundantly`, () => `Somebody Update the Prophecy`],
+    falseprophet: [() => `Beware of False Prophets`, () => `Test the Prophets`, () => `Put Not Your Trust in Projections`, () => `The Projection Lied`],
+    elo: [F => `${F} Is Moving Up the Pews`, F => `Save ${F} a Seat`, F => `${F} Heads for the Front Row`, () => `A Good Week to Climb`],
+    rivalry: [F => `${F} Finally Got One`, () => `The Streak Is Over`, () => `A Long Time Coming`, () => `The Walls Came Down`],
     player: [() => `Sunday School Star`, F => `${F} Found His Star Pupil`, () => `One Man Carried the Offering`, () => `Perfect Attendance`],
     low: [() => `A Long Week in the Valley`, () => `Still in the Wilderness`, () => `Somebody Bring a Covered Dish`, () => `We Will Keep Him in Our Prayers`],
   };
-  const SERMON_RANK = { high: 1, blowout: 1, upset: 1, tough: 1, badbeat: 1, regret: 1, asleep: 1, player: 1, close: -1, lucky: -1, low: -1 };
-  const SERMON_CAT = { high: "score", low: "score", blowout: "game", close: "game", upset: "game", badbeat: "luck", tough: "luck", lucky: "luck", regret: "lineup", asleep: "lineup", player: "player" };
+  const SERMON_RANK = { high: 1, blowout: 1, upset: 1, tough: 1, badbeat: 1, regret: 1, asleep: 1, player: 1, prodigal: 1, prophet: 1, falseprophet: 1, elo: 1, rivalry: 1, close: -1, lucky: -1, low: -1 };
+  const SERMON_CAT = { high: "score", low: "score", blowout: "game", close: "game", upset: "game", badbeat: "luck", tough: "luck", lucky: "luck", regret: "lineup", asleep: "lineup", player: "player", prodigal: "news", prophet: "news", falseprophet: "news", elo: "news", rivalry: "news" };
+  // Rotating formats: the same facts in a different frame each week
+  const SERMON_TONE = { high: 1, hb: 1, hp: 1, blowout: 1, upset: 1, ul: 1, player: 1, prophet: 1, elo: 1, rivalry: 1, lucky: 1, low: -1, ll: -1, asleep: -1, regret: -1, rl: -1, falseprophet: -1, prodigal: -1, bl: -1, tough: -1, badbeat: -1, bb: -1 };
+  const SERMON_FORMATS = [
+    { kicker: "This week's sermon", label: () => "" },
+    { kicker: "This week's bulletin", label: t => t > 0 ? "Praise report" : t < 0 ? "Prayer request" : "Announcement" },
+    { kicker: "Business meeting minutes", label: t => t > 0 ? "New business" : t < 0 ? "Referred to committee" : "Noted in the minutes" },
+    { kicker: "This week's sermon", label: (t, i) => `Point ${i + 1}` },
+  ];
+  const SERMON_AMEN = ["Go in peace.", "Let us close in prayer.", "See you Sunday.", "Drive safe in the parking lot."];
   const sermonHash = str => { let h = 7; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0; return h; };
 
   function sermonRanks(s, w) {
@@ -1826,10 +1870,34 @@ function wTeam(W, tm) {
     return rank;
   }
 
+  // Stories from outside the weekly awards. Each one must clear its own bar.
+  function sermonNews(s, w, mem) {
+    const tws = s.teamWeeks.filter(t => t.week === w && t.result), out = {};
+    (s.wire || []).filter(e => e.leg < w && e.drops.length && !(st.model.owners[e.uid] || {}).orphan).forEach(e => e.drops.forEach(pid => {
+      if (["K", "DEF"].includes(String(s.pinfo(pid)[1]).toUpperCase())) return;
+      tws.forEach(t => { if (t.uid === e.uid) return; const x = t.starters.find(y => y.pid === pid); if (x && x.pts >= 20 && (!out.prodigal || x.pts > out.prodigal.pts || (x.pts === out.prodigal.pts && e.leg >= out.prodigal.wk))) out.prodigal = { uid: e.uid, to: t.uid, pid, pts: x.pts, wk: e.leg }; });
+    }));
+    const stars = mem.ix && mem.ix.season === s ? prophWeekStars(mem.ix, w) : null;
+    if (stars && stars.best.gap >= 15) out.prophet = stars.best;
+    // A zero usually means he did not play, and that is no joke. Take the worst man who suited up.
+    if (stars) { const P = mem.ix.proj.weeks[w] || {}; let low = null; Object.entries(mem.ix.startOf[w] || {}).forEach(([pid, uid]) => { const pr = P[pid], ac = mem.ix.act(w, pid); if (pr == null || !ac || ac <= 0) return; const gap = Math.round((ac - pr) * 100) / 100; if (!low || gap < low.gap) low = { pid, uid, proj: pr, act: ac, gap }; }); if (low && low.gap <= -15) out.falseprophet = low; }
+    const up = (mem.elo[s.year + ":" + w] || []).sort((p, q) => q.d - p.d)[0];
+    if (up && up.d > 0) out.elo = up;
+    s.games.filter(g => g.week === w && g.a.pts !== g.b.pts).forEach(g => {
+      const win = g.a.pts > g.b.pts ? g.a.uid : g.b.uid, lose = win === g.a.uid ? g.b.uid : g.a.uid;
+      const key = [win, lose].sort().join("|"), past = mem.series[key] || (mem.series[key] = []);
+      let n = 0; for (let i = past.length - 1; i >= 0 && past[i] === lose; i--) n++;
+      if (n >= 3 && (!out.rivalry || n > out.rivalry.n)) out.rivalry = { uid: win, vs: lose, n };
+      past.push(win);
+    });
+    return out;
+  }
+
   function sermonWeek(s, w, mem) {
     const a = {}; weekAwards(s, w).forEach(x => { a[x.key] = x; });
     if (!a.high) return null;
-    const metric = { high: a.high.value, blowout: a.blowout && a.blowout.value, close: a.close && a.close.value, upset: a.upset && a.upset.gap, badbeat: a.badbeat && a.badbeat.value, tough: a.tough && a.tough.value, lucky: a.lucky && a.lucky.value, player: a.player && a.player.value, regret: a.regret && a.regret.value, asleep: a.asleep && a.asleep.value, low: a.low && a.low.value };
+    mem.news = sermonNews(s, w, mem);
+    const metric = { prodigal: mem.news.prodigal && mem.news.prodigal.pts, prophet: mem.news.prophet && mem.news.prophet.gap, falseprophet: mem.news.falseprophet && -mem.news.falseprophet.gap, elo: mem.news.elo && mem.news.elo.d, rivalry: mem.news.rivalry && mem.news.rivalry.n, high: a.high.value, blowout: a.blowout && a.blowout.value, close: a.close && a.close.value, upset: a.upset && a.upset.gap, badbeat: a.badbeat && a.badbeat.value, tough: a.tough && a.tough.value, lucky: a.lucky && a.lucky.value, player: a.player && a.player.value, regret: a.regret && a.regret.value, asleep: a.asleep && a.asleep.value, low: a.low && a.low.value };
     const rarity = k => { const h = mem.hist[k] || [], v = metric[k]; if (h.length < 5) return 50; return 100 * h.filter(x => SERMON_RANK[k] > 0 ? x < v : x > v).length / h.length; };
     const remember = () => Object.keys(metric).forEach(k => { if (metric[k] != null) (mem.hist[k] = mem.hist[k] || []).push(metric[k]); });
 
@@ -1846,7 +1914,7 @@ function wTeam(W, tm) {
     // Live facts, and what the week did to the standings
     const allTw = st.model.seasons.filter(x => +x.year <= +s.year).flatMap(x => x.teamWeeks.filter(t => t.game && (x.year !== s.year || t.week <= w)));
     const streakOf = uid => { let n = 0; s.teamWeeks.filter(t => t.uid === uid && t.result && t.week <= w).sort((p, q) => q.week - p.week).every(t => (t.result === "W" ? ++n : 0)); return n; };
-    const tail = {}, bonus = {}; let streakUsed = false;
+    const tail = {}, bonus = { rivalry: 15 }; let streakUsed = false;
     if (a.high) { const v = a.high.value; if (allTw.every(t => t.pts <= v)) { tail.high = " A new league record."; bonus.high = 40; } else if (played.every(t => t.pts <= v) && w > 1) { tail.high = " That is the season high."; bonus.high = 12; } }
     if (a.low && w > 1 && played.every(t => t.pts >= a.low.value)) { tail.low = " Lowest score of the season so far."; bonus.low = 12; }
     ["high", "blowout", "upset", "close", "lucky"].forEach(k => { if (streakUsed || !a[k]) return; const n = streakOf(a[k].uid); if (n >= 3) { tail[k] = (tail[k] || "") + ` ${esc(ownerName(a[k].uid))} has won ${n} straight.`; bonus[k] = (bonus[k] || 0) + (n >= 4 ? 10 : 4); streakUsed = true; if (n >= 4) mem.streak = { uid: a[k].uid, n }; } });
@@ -1872,6 +1940,11 @@ function wTeam(W, tm) {
     if (a.regret) { const r = a.regret.regret; S.regret = story("regret", [a.regret.uid], [a.regret.uid], T => [T(a.regret.uid), P(r, r.bench), P(r, r.starter), D(r.diff)]); }
     if (a.asleep) S.asleep = story("asleep", [a.asleep.uid], [a.asleep.uid], T => [T(a.asleep.uid), N(a.asleep.value)]);
     if (a.player) S.player = story("player", [a.player.uid], [], T => [T(a.player.uid), `<b>${esc(s.pinfo(a.player.pid)[0])}</b>`, N(a.player.value)], { filler: rarity("player") < 85 });
+    if (mem.news.prodigal) { const x = mem.news.prodigal; S.prodigal = story("prodigal", [x.uid, x.to], [x.uid], T => [T(x.uid), T(x.to), `<b>${esc(s.pinfo(x.pid)[0])}</b>`, N(x.pts), x.wk]); }
+    if (mem.news.prophet) { const x = mem.news.prophet; S.prophet = story("prophet", [x.uid], [], T => [T(x.uid), `<b>${esc(s.pinfo(x.pid)[0])}</b>`, D(x.proj), D(x.act)]); }
+    if (mem.news.falseprophet) { const x = mem.news.falseprophet; S.falseprophet = story("falseprophet", [x.uid], [x.uid], T => [T(x.uid), `<b>${esc(s.pinfo(x.pid)[0])}</b>`, D(x.proj), D(x.act)]); }
+    if (mem.news.elo) { const x = mem.news.elo; S.elo = story("elo", [x.uid], [], T => [T(x.uid), D(x.d)], { filler: rarity("elo") < 85, noLead: true }); }
+    if (mem.news.rivalry) { const x = mem.news.rivalry; S.rivalry = story("rivalry", [x.uid, x.vs], [], T => [T(x.uid), T(x.vs), x.n]); }
     if (a.low) S.low = story("low", [a.low.uid], [a.low.uid], T => [T(a.low.uid), N(a.low.value)]);
 
     // Joined stories replace their parts
@@ -1911,7 +1984,7 @@ function wTeam(W, tm) {
     // The lead: the top story, unless that man or that kind of story led last week.
     const leadScore = x => x.adj - (["low", "asleep", "regret"].includes(x.key) ? 12 : 0) - (last && last.lead === x.key ? 25 : 0) - (last && last.leadUid === x.uids[0] ? 15 : 0);
     const commishBusy = mem.log.slice(-3).some(p => p.leadUid === mem.commish);
-    const lead = pool.filter(x => !x.filler && !(commishBusy && x.uids[0] === mem.commish)).sort((p, q) => leadScore(q) - leadScore(p))[0];
+    const lead = pool.filter(x => !x.filler && !x.noLead && !(commishBusy && x.uids[0] === mem.commish)).sort((p, q) => leadScore(q) - leadScore(p))[0];
     if (!lead) { remember(); return null; }
 
     // Fill the card: two lines a team, one negative line a man, two stories a category
@@ -1919,8 +1992,11 @@ function wTeam(W, tm) {
     const fits = (x, cap) => !x.uids.some(u => (lines[u] || 0) >= 2) && !x.victims.some(u => hit[u]) && (cats[x.cat] || 0) < cap;
     const take = x => { x.uids.forEach(u => { lines[u] = (lines[u] || 0) + 1; }); x.victims.forEach(u => { hit[u] = 1; }); cats[x.cat] = (cats[x.cat] || 0) + 1; chosen.push(x); };
     take(lead);
-    pool.forEach(x => { if (x !== lead && !x.filler && chosen.length < SERMON_MAX && fits(x, 2)) take(x); });
+    pool.forEach(x => { if (x !== lead && !x.filler && chosen.length < SERMON_MAX && fits(x, 2) && !(x.key === "elo" && chosen.some(c => c.uids[0] === x.uids[0]))) take(x); });
     if (chosen.length < 4) pool.forEach(x => { if (!chosen.includes(x) && chosen.length < 4 && fits(x, 3)) take(x); });
+    // An Elo line adds nothing when the same man already has a story
+    const dup = chosen.findIndex(x => x.key === "elo" && chosen.some(c => c !== x && c.uids[0] === x.uids[0]));
+    if (dup > 0 && chosen.length > 4) chosen.splice(dup, 1);
 
     // Order: lead first, then the best story that differs in kind from the one before it
     const rest = chosen.slice(1), order = [lead];
@@ -1942,12 +2018,13 @@ function wTeam(W, tm) {
     mem.streak = null;
     remember();
     const teams = {}; final.forEach(x => x.uids.forEach(u => { teams[u] = (teams[u] || 0) + 1; }));
-    return { title, final, keys: final.flatMap(x => x.keys), teams, lead: lead.key, leadUid: lead.uids[0] };
+    return { title, final, keys: final.flatMap(x => x.keys), teams, lead: lead.key, leadUid: lead.uids[0], format: draw("format", SERMON_FORMATS.length) };
   }
 
   function sermonBook() {
     const M = st.model; if (M.sermons) return M.sermons;
-    const book = {}, mem = { hist: {}, used: {}, log: [], commish: (Object.values(M.owners).find(o => o.handle === COMMISH) || {}).uid };
+    const elo = {}; eloRatings(M).forEach(r => r.hist.forEach(x => { if (x.d != null && !x.carry) (elo[x.year + ":" + x.week] = elo[x.year + ":" + x.week] || []).push({ uid: r.uid, d: x.d }); }));
+    const book = {}, mem = { hist: {}, used: {}, log: [], series: {}, elo, ix: pIdx(), commish: (Object.values(M.owners).find(o => o.handle === COMMISH) || {}).uid };
     M.seasons.slice().sort((p, q) => +p.year - +q.year).forEach(s => {
       book[s.year] = {}; mem.log = [];
       s.weeks.slice().sort((p, q) => p - q).forEach(w => { const plan = sermonWeek(s, w, mem); if (plan) { book[s.year][w] = plan; mem.log.push(plan); } });
@@ -1960,8 +2037,55 @@ function wTeam(W, tm) {
   function sermon(s, w, short) {
     const plan = (sermonBook()[s.year] || {})[w];
     if (!plan) return { title: "", lines: [] };
-    const name = short ? uid => `<b>${esc(ownerName(uid))}</b>` : uid => T(uid, s);
-    return { title: plan.title, lines: plan.final.map(x => SERMON_BANK[x.bank][x.idx](...x.args(name)) + x.tail) };
+    const name = short ? uid => `<b>${esc(ownerName(uid))}</b>` : uid => T(uid, s), fmt = SERMON_FORMATS[plan.format];
+    const lines = plan.final.map((x, i) => { const lab = fmt.label(SERMON_TONE[x.bank] || 0, i); return (lab ? `<span class="sl">${lab}</span>` : "") + SERMON_BANK[x.bank][x.idx](...x.args(name)) + x.tail; });
+    return { title: plan.title, kicker: fmt.kicker, lines, benediction: sermonBenediction(s, w) };
+  }
+
+  // The closing line looks ahead, so only the newest sermon has one
+  function sermonBenediction(s, w) {
+    if (s !== st.model.latest || s.complete || w !== s.weeks[s.weeks.length - 1]) return "";
+    const sd = stakesData(s), g = sd && sd.games[0]; if (!g) return "";
+    const swing = c => (c && c.winPo != null && c.lossPo != null ? c.winPo - c.lossPo : -1);
+    const u = swing(g.ca) >= swing(g.cb) ? g.a : g.b, c = u === g.a ? g.ca : g.cb, o = u === g.a ? g.b : g.a;
+    if (swing(c) <= 0) return "";
+    return `<b>${esc(ownerName(g.a))}</b> meets <b>${esc(ownerName(g.b))}</b> in Week ${sd.week}. A win puts ${esc(ownerName(u))} at <b class="num">${Math.round(c.winPo * 100)}%</b> to make the playoffs. A loss leaves him at <b class="num">${Math.round(c.lossPo * 100)}%</b>. ${SERMON_AMEN[w % SERMON_AMEN.length]}`;
+  }
+
+  /* ---------- Recap awards: always twelve tiles, so rows fill at 2, 3, and 4 columns ---------- */
+  function recapTiles(s, w) {
+    const a = {}; weekAwards(s, w).forEach(x => { a[x.key] = x; });
+    const tws = s.teamWeeks.filter(t => t.week === w && t.result);
+    const tile = (cls, t, v, n, d) => `<div class="award ${cls}"><span class="t">${esc(t)}</span><span class="v">${v}</span><span class="n">${n}</span><span class="d">${d}</span></div>`;
+    const aw = k => { const x = a[k]; if (!x) return null; const vs = x.vs ? `<span class="d">over ${esc(teamIn(x.vs, s))}</span>` : ""; return `<div class="award ${x.key}"><span class="t">${esc(x.title)}</span><span class="v">${f2(x.value)}</span><span class="n">${esc(teamIn(x.uid, s))}</span><span class="d">${esc(x.note)}</span>${vs}</div>`; };
+    const ix = pIdx(), ws = ix && ix.season === s ? prophWeekStars(ix, w) : null;
+    const prophet = (k, t, x, note) => ws ? tile(k, t, sign(x.gap), pn(x.pid, s.pinfo(x.pid)[0]), `${esc(note)}. Projected ${f1(x.proj)}, scored ${f1(x.act)}, for ${esc(ownerName(x.uid))}.`) : null;
+    const topAt = pos => { let b = null; tws.forEach(t => t.starters.forEach(x => { if (x.pid !== "0" && s.pinfo(x.pid)[1] === pos && (!b || x.pts > b.pts)) b = { ...x, uid: t.uid }; })); return b; };
+    const playerTile = (t, b, note) => b ? tile("", t, f2(b.pts), esc(teamIn(b.uid, s)), `${esc(s.pinfo(b.pid)[0])}. ${esc(note)}`) : null;
+    const eff = tws.map(t => ({ uid: t.uid, e: t.pts + (t.lost || 0) > 0 ? t.pts / (t.pts + (t.lost || 0)) : 0 })).sort((p, q) => q.e - p.e)[0];
+    let bench = null; tws.forEach(t => { const on = new Set(t.starters.map(x => x.pid)); Object.entries(t.pp || {}).forEach(([pid, v]) => { if (!on.has(pid) && (!bench || v > bench.pts)) bench = { pid, pts: v, uid: t.uid }; }); });
+    let climb = null; tws.forEach(t => { const was = s.teamWeeks.find(x => x.uid === t.uid && x.week === w - 1 && x.result); if (was && (!climb || t.pts - was.pts > climb.d)) climb = { uid: t.uid, d: t.pts - was.pts }; });
+    return [aw("high"), aw("low"), aw("blowout"), aw("close"), aw("tough"), aw("lucky"), aw("player"), aw("upset"), aw("badbeat"), aw("regret"),
+      ws && prophet("high", "Prophecy Fulfilled", ws.best, "Furthest over his projection"), ws && prophet("low", "False Prophet", ws.worst, "Furthest under his projection"),
+      aw("asleep"), aw("bench"),
+      eff && tile("high", "Good and Faithful", (eff.e * 100).toFixed(1) + "%", esc(teamIn(eff.uid, s)), "Closest to his best possible lineup"),
+      playerTile("Armor of God", topAt("DEF"), "Top defense of the week"), playerTile("Best Foot Forward", topAt("K"), "Top kicker of the week"),
+      playerTile("Still Small Voice", bench, "Top score left on any bench"),
+      climb && tile("high", "Revival Meeting", "+" + f2(climb.d), esc(teamIn(climb.uid, s)), "Biggest jump from last week")].filter(Boolean).slice(0, 12);
+  }
+
+  /* ---------- Testimonies: outside player notes, latest week only ---------- */
+  const NOTE_TAG = { call: ["New Calling", "t-up"], pew: ["Back Pew", "t-down"], manna: ["Manna", ""], fast: ["Fasting", ""] };
+  const noteList = () => ((st.notes && st.notes.notes) || []);
+  const noteTag = n => { const t = NOTE_TAG[n.tag]; return t ? `<span class="tag ${t[1]}">${esc(t[0])}</span>` : ""; };
+  const noteSource = () => st.notes ? `Week ${esc(st.notes.week)}, per ${esc(st.notes.source)}.` : "";
+  function testimonyTile(s) {
+    const ros = s.currentRosters || {}, on = pid => Object.values(ros).some(r => r.includes(pid));
+    const all = noteList().filter(n => on(n.pid)); if (!all.length) return "";
+    const mine = st.me && ros[st.me] ? all.filter(n => ros[st.me].includes(n.pid)) : [];
+    const pool = mine.length ? mine : all, k = (typeof DYK_SEED === "number" ? DYK_SEED : 0) + ((st.raw && st.raw.dykBump) || 0);
+    const n = pool[k % pool.length];
+    return `<div class="didyou"><span class="dk">${mine.length ? "A testimony from your roster" : "Testimony"}</span><span class="dt">${pn(n.pid, s.pinfo(n.pid)[0])}${noteTag(n)} ${esc(n.text)}</span><span class="fine">${noteSource()}</span></div>`;
   }
 
   /* ---------- Home: the 30-second front door ---------- */
@@ -1971,9 +2095,10 @@ function wTeam(W, tm) {
     if (!w) return `<p class="empty">No scored weeks yet.</p>`;
     const preach = sermon(s, w, true), lines = preach.lines.slice(0, SERMON_HOME);
     let h = meBlock(s);
-    h += `<section class="hero share"><div class="share-top"><span class="share-brand">Gambling Baptist</span><span class="share-wk">${esc(s.year)} · Week ${w}</span></div><p class="hero-k">This week's sermon</p><h2 class="hero-h st">${preach.title}</h2><ol class="sermon">${lines.map(l => `<li>${l}</li>`).join("")}</ol><p class="share-hint">Screenshot this card and post it in GroupMe.</p>${goBtn("week", "Tuesday Recap")}Read the full recap</button></section>`;
+    h += `<section class="hero share"><div class="share-top"><span class="share-brand">Gambling Baptist</span><span class="share-wk">${esc(s.year)} · Week ${w}</span></div><p class="hero-k">${preach.kicker}</p><h2 class="hero-h st">${preach.title}</h2><ol class="sermon">${lines.map(l => `<li>${l}</li>`).join("")}</ol>${preach.benediction ? `<p class="sermon-ben"><span class="sl">Benediction</span>${preach.benediction}</p>` : ""}<p class="share-hint">Screenshot this card and post it in GroupMe.</p>${goBtn("week", "Tuesday Recap")}Read the full recap</button></section>`;
     const rec0 = recordOfWeek();
     if (rec0) h += `<div class="didyou"><span class="dk">Did you know</span><span class="dt">${rec0}</span></div>`;
+    h += testimonyTile(s);
     { const sd = !s.complete ? stakesData(s) : null; if (sd && sd.games.length) { h += `<section class="gotw"><h3>The Big Revival · Week ${sd.week}'s game of the week</h3><p class="muted sm">The matchup that moves the playoff odds most.</p>${stakeCard(sd.games[0], sd.pp, true)}<button type="button" class="go-btn" data-go="standings" data-sec="What's at Stake">Every game's stakes</button></section>`; } }
 
     // Trophy race and lid watch
@@ -2329,16 +2454,8 @@ function wTeam(W, tm) {
     h += `</div>`;
     if (s.pws <= s.weeks[s.weeks.length - 1]) h += `<p class="fine">Dashed weeks are playoff weeks.</p>`;
     const preach = sermon(s, st.week), lines = preach.lines;
-    if (lines.length) h += `<div class="hero slim"><p class="hero-k">The sermon</p><h2 class="hero-h st">${preach.title}</h2><ol class="sermon">${lines.map(l => `<li>${l}</li>`).join("")}</ol></div>`;
-    h += `<h3>Awards</h3><div class="awards">`;
-    weekAwards(s, st.week).forEach(a => {
-      const vs = a.vs ? `<span class="d">over ${esc(teamIn(a.vs, s))}</span>` : "";
-      h += `<div class="award ${a.key}"><span class="t">${esc(a.title)}</span><span class="v">${f2(a.value)}</span><span class="n">${esc(teamIn(a.uid, s))}</span><span class="d">${esc(a.note)}</span>${vs}</div>`;
-    });
-    { const ix = pIdx(); const ws = ix && ix.season === s ? prophWeekStars(ix, st.week) : null;
-      if (ws) [["high", "Prophecy Fulfilled", ws.best, "Furthest over his projection"], ["low", "False Prophet", ws.worst, "Furthest under his projection"]].forEach(([k, t, x, note]) => {
-        h += `<div class="award ${k}"><span class="t">${t}</span><span class="v">${sign(x.gap)}</span><span class="n">${pn(x.pid, s.pinfo(x.pid)[0])}</span><span class="d">${esc(note)}. Projected ${f1(x.proj)}, scored ${f1(x.act)}, for ${esc(ownerName(x.uid))}.</span></div>`;
-      }); }
+    if (lines.length) h += `<div class="hero slim"><p class="hero-k">${preach.kicker}</p><h2 class="hero-h st">${preach.title}</h2><ol class="sermon">${lines.map(l => `<li>${l}</li>`).join("")}</ol>${preach.benediction ? `<p class="sermon-ben"><span class="sl">Benediction</span>${preach.benediction}</p>` : ""}</div>`;
+    h += `<h3>Awards</h3><div class="awards">${recapTiles(s, st.week).join("")}`;
     h += `</div><h3>Matchups</h3><div class="games">`;
     s.games.filter(g => g.week === st.week).sort((a, b) => (a.kind === "consolation") - (b.kind === "consolation") || !!b.lidGame - !!a.lidGame || b.margin - a.margin).forEach(g => {
       const side = (x, y) => { const c = x.pts > y.pts ? "won" : "lost"; return `<span class="nm ${c}">${who(x.uid, s)}</span><span class="sc ${c}">${f2(x.pts)}</span>`; };
@@ -3010,6 +3127,7 @@ function wTeam(W, tm) {
     const own = Object.entries(L0.currentRosters || {}).find(([, r]) => r.includes(pid));
     const inj = st.model.injuries && st.model.injuries[pid];
     let h = `<div class="pc-h"><div><h2 id="pcTitle">${esc(name)}</h2><p class="muted">${[pos, team].filter(Boolean).map(esc).join(" · ")}${pos || team ? " · " : ""}${own ? `${esc(ownerName(own[0]))}'s roster` : "Free agent"}${inj && inj.s ? ` <span class="inj" title="Sleeper injury status">${esc(inj.s)}</span>` : ""}</p></div><button type="button" class="pc-x" data-pcclose="1" aria-label="Close player card">×</button></div>`;
+    { const ns = noteList().filter(n => n.pid === pid); if (ns.length) h += `<div class="pc-sec"><h3>Testimony</h3>${ns.map(n => `<p class="pc-line">${noteTag(n)} ${esc(n.text)}</p>`).join("")}<p class="fine">${noteSource()}</p></div>`; }
     // Trade value
     const e = st.tv && st.tv.cons.byPid[pid];
     if (e) { const tr = tvTier(e.value); h += `<div class="pc-sec"><h3>Trade value</h3><div class="row"><div>${tr ? `Tier ${tr.n} · ${esc(tr.name)}` : ""}<small class="muted pc-sub">Week ${st.tv.week.week} blend</small></div><div class="r">${f1(e.value)}${e.delta != null && Math.abs(e.delta) >= 0.5 ? `<small class="${e.delta > 0 ? "w" : "l"}">${e.delta > 0 ? "▲" : "▼"}${f1(Math.abs(e.delta))} since last week</small>` : ""}</div></div><button type="button" class="linkish" data-pcchart="${esc(e.key)}" data-pcpos="${esc(e.pos)}">Open on the Trade Chart</button>${own && !["K", "DEF"].includes(pos) ? ` <button type="button" class="linkish" data-pcshop="${esc(pid)}" data-pcowner="${esc(own[0])}">Shop this player</button>` : ""}</div>`; }
@@ -3716,7 +3834,7 @@ function wTeam(W, tm) {
   // A page republished from the drop zone carries its data inline; otherwise read the published files
   const inlineJSON = id => { const el = document.getElementById(id); if (!el) return null; try { return JSON.parse(el.textContent); } catch (e) { return null; } };
   const dIn = inlineJSON("gb-data"), vIn = inlineJSON("gb-values");
-  Promise.all([dIn ? Promise.resolve(dIn) : getJSON("data.json"), vIn ? Promise.resolve(vIn) : getJSON("values.json").catch(() => null)])
-    .then(([raw, vals]) => { st.values = vals; start(raw); })
+  Promise.all([dIn ? Promise.resolve(dIn) : getJSON("data.json"), vIn ? Promise.resolve(vIn) : getJSON("values.json").catch(() => null), getJSON("notes.json").catch(() => null)])
+    .then(([raw, vals, notes]) => { st.values = vals; st.notes = notes; start(raw); })
     .catch(e => { $("view").innerHTML = `<p class="empty">The league data did not load (${esc(e.message)}). Refresh the page to try again.</p>`; });
 })();

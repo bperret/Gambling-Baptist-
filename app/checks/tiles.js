@@ -1,0 +1,8 @@
+// Every week must show exactly 12 award tiles, and the grid must fill at phone, tablet, and desktop widths.
+const {chromium}=require(require("child_process").execSync("npm root -g").toString().trim()+"/playwright");const http=require('http'),fs=require('fs'),path=require('path');const S=process.argv[2];
+const srv=http.createServer((q,r)=>{const f=path.join(S,q.url.split('?')[0].replace(/^\/$/,'/index.html'));if(fs.existsSync(f)){r.writeHead(200);r.end(fs.readFileSync(f));}else{r.writeHead(404);r.end('{}');}}).listen(8795,async()=>{
+const b=await chromium.launch();const p=await b.newPage();p.on('pageerror',e=>console.log('ERR',e.message));await p.goto('http://localhost:8795/');await p.waitForTimeout(2200);
+const o=await p.evaluate(()=>{const R=[],ti={};for(const s of __st.model.seasons)for(const w of s.weeks){const t=__rt(s,w);R.push(t.length);t.forEach(h=>{const m=h.match(/class="t">([^<]+)/);ti[m[1]]=(ti[m[1]]||0)+1;});if(/undefined|NaN/.test(t.join('')))R.push(-1);}return {R,ti};});
+console.log('weeks',o.R.length,'counts',[...new Set(o.R)].join(','));console.log(JSON.stringify(o.ti));
+for(const width of [360,390,600,768,1280]){await p.setViewportSize({width,height:844});await p.evaluate(()=>{location.hash='#week'});await p.waitForTimeout(350);const r=await p.$eval('.awards',e=>({c:getComputedStyle(e).gridTemplateColumns.split(' ').length,n:e.children.length,ovf:document.documentElement.scrollWidth>innerWidth}));console.log(width,JSON.stringify(r),'rows full',r.n%r.c===0);if(width===390||width===768)await p.locator('.awards').screenshot({path:`${S}/tiles-${width}.png`});}
+await b.close();srv.close();});

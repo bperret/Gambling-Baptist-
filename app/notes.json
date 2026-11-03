@@ -1,0 +1,40 @@
+{
+"season": "2026",
+"week": 8,
+"source": "Late-Round",
+"notes": [
+{
+"pid": "5967",
+"text": "Snap shares of 76%, 74%, and 80%, after a 55% peak in his first five games.",
+"tag": "call"
+},
+{
+"pid": "8137",
+"text": "Season-low 62% route share.",
+"tag": "pew"
+},
+{
+"pid": "12490",
+"text": "27.3 Standard PPR points a game on 12.1 Expected Fantasy Points.",
+"tag": "manna"
+},
+{
+"pid": "13346",
+"text": "23.7 Expected Fantasy Points, 9.7 Standard PPR points scored.",
+"tag": "fast"
+},
+{
+"pid": "9997",
+"text": "His first catchless game."
+},
+{
+"pid": "12526",
+"text": "45.2 Standard PPR points a game without Jalen Coker."
+},
+{
+"pid": "12527",
+"text": "6.5% rush share.",
+"tag": "pew"
+}
+]
+}

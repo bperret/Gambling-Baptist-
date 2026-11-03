@@ -5,14 +5,14 @@ The live app is the source of truth. This branch holds a backup of the source, t
 
 ## Start-up steps for Claude
 1. `add_repo` bperret/Gambling-Baptist- with push access. Clone it and check out branch `app-source`. `main` holds the export page and stays as it is.
-2. Run `Artifact read` on the app, with `path` for `index.html`, `data.json`, and `values.json`. Also read it without `path`, or the publish is refused. Copy them into `app/`, with `index.html` as `app/live.html`.
+2. Run `Artifact read` on the app, with `path` for `index.html`, `data.json`, `values.json`, and `notes.json`. Also read it without `path`, or the publish is refused. Copy them into `app/`, with `index.html` as `app/live.html`.
 3. From `app/`, run `python3 tools/sync.py`. This writes the live source to `src/`. If `src/` differs from the branch, the live page wins.
 4. Before a publish, read `data.json` again. The commissioner can publish from the in-app drop zone at any time. If live is newer, use the live file.
 5. After a publish, commit `app/src` and any notes to `app-source`, and push. Never send a zip.
 
 ## What exists
 - **The app** (one artifact, "Anyone with the link," league members open it from GroupMe): https://claude.ai/artifact/6s6aBtqinFDfWT6L7iUyi2
-  - Publish with `file_path` set to the absolute path of `app/index.html`, files `{"data.json": ..., "values.json": ...}` as absolute paths, and that `url`.
+  - Publish with `file_path` set to the absolute path of `app/index.html`, files `{"data.json": ..., "values.json": ..., "notes.json": ...}` as absolute paths, and that `url`.
   - Capabilities `{artifact: {}, user: {}}` are stored, so omit `capabilities`.
   - The live page carries its own source in `<script id="gb-src">` (JSON with `reset`, `shell`, `app`). `tools/build.py` keeps it current.
 - **Sleeper export page:** https://bperret.github.io/Gambling-Baptist-/ (branch `main`). League members never use it.
@@ -24,6 +24,7 @@ The live app is the source of truth. This branch holds a backup of the source, t
 - **Source:** `src/shell.html` (CSS and markup) and `src/app.js` (the league engine, trade values, and all views, joined into one file). The old split files (`ui.js`, `compute.js`, and the others) are retired.
 - **Commands, from `app/`:** `python3 tools/build.py` builds `index.html`. `python3 tools/build.py --publish` also rotates Did You Know. Use it right before every publish.
 - **Checks, before every publish.** Put `playwright` in the module path (it is preinstalled). Make a folder `sim`, run `python3 checks/hook.py index.html sim/index.html`, and copy `data.json` and `values.json` into `sim`.
+  - `node checks/tiles.js sim`: 12 award tiles every week, full rows at 2, 3, and 4 columns.
   - `node checks/sermon.js sim 2026`: every week, no missing values, the two-line limit, no back-to-back repeats.
   - `node checks/views.js sim sim`: views at 360, 390, and 768 widths, light and dark, no errors or sideways scrolling.
   - `node checks/plans.js sim`, then `python3 checks/gates.py data.json`: rechecks the sermon gates and Week 8 facts from raw data.
@@ -36,7 +37,8 @@ The commissioner sends the export JSON (or uses the drop zone), Fantasy Spew and
 2. Run `python3 tools/ecr.py ecr.csv week.json`.
 3. Append the week to `values.json` under `weeks`. Keep every week, because history drives Risers and Fallers and the trends.
 4. Report unmatched names, and add aliases to `TV_ALIAS` in `src/app.js`.
-5. Run the checks, run `build.py --publish`, publish, and commit.
+5. If he pastes the Late-Round player notes, replace `notes.json` with the new week: `{season, week, source, notes: [{pid, tag, text}]}`. Keep rostered players only, rewrite each note, and report names that do not match. Tags: `call` New Calling (green), `pew` Back Pew (red), `manna` Manna, `fast` Fasting (neutral), or none. Label points "Standard PPR points." Expected Fantasy Points stay separate from Workload points. No small-sample or missing-context filters.
+6. Run the checks, run `build.py --publish`, publish, and commit.
 
 ## Model settings (do not change without being asked)
 - **Trade value blend:** FantasyPros ECR 50%, Fantasy Spew 25%, Kyle Menton 25%. Ranks are computed within each source, with ties averaged. A player a source leaves out gets rank = that source's length + 1. The blend is a weighted average of ranks, re-ranked 1 to N. Value curve: `100*exp(-0.03605*(rank-1)^0.8665)`. K and DEF appear on the chart (ECR only) but are excluded from trade ideas.
@@ -52,11 +54,15 @@ The commissioner sends the export JSON (or uses the drop zone), Fantasy Spew and
 - **Draft (The Sower):** current season gap = trade value now minus the curve value at the pick. Past seasons use position rank, drafted vs. finished. Grades are curved by z-score, A+ to F.
 - **Weighed on the Scales:** each 2026 trade rescored with current values. Still even (10% or less), Leaning (30% or less), Spoiled like manna (beyond).
 - Playoff and toilet bowl games share one "With postseason" filter. Toilet bowl games count in Elo, rivalries, and everything else.
+- **Recap awards:** always 12 tiles, by `recapTiles`. Priority: top and low score, blowout, close, tough, lucky, top player, upset, bad beat, regret, the two Prophecy tiles, Asleep, bench, then fill tiles (Good and Faithful, Armor of God, Best Foot Forward, Still Small Voice, Revival Meeting).
 - **Sermon:** `sermonBook()` plans every week in order, so past weeks never change. Bank lines rotate through every option before repeating.
   - Score: percentile against league history, plus 40 for a league record, 12 for a season high or low, 4 to 10 for a streak, and 14 for a standings change.
   - Memory: story type used last week minus 18, two weeks ago minus 8. Each team minus 5 a line last week, to a limit of 10.
   - Lead: minus 25 for the same lead type, minus 15 for the same lead team, minus 12 for low, asleep, or regret. The commissioner can lead once in any four weeks.
   - Gates: blowout 25 or more, close 10 or less, tough at or above the week's median, lucky below it, regret 8 or more, asleep 15 or more, low at or below 90% of the season average.
+  - News stories: dropped player scoring 20 or more for another team, projection miss of 15 or more (a zero never counts, since he likely did not play), Elo climb in the top 15% (never leads, and is dropped if the man already has a story), and a series skid of 3 or more ending.
+  - Benediction: the newest sermon only, from the game of the week in What's at Stake.
+  - Formats rotate each week: sermon, bulletin, business meeting minutes, numbered points. No ordinance-themed frames.
   - Card: 7 lines at most, 5 on Home with first names. Two lines a team, one negative line a man, two stories a category. Top player runs only at the 85th percentile or better, or to reach 4 lines. Titles for negative stories never name the man.
 
 ## Standing rules from Benton
@@ -68,7 +74,5 @@ The commissioner sends the export JSON (or uses the drop zone), Fantasy Spew and
 - **Reply style:** direct and concise, no flattery. Push back when warranted. Never end with a question. Cite sources for product or capability claims, or say "not certain, let me check." No em dashes, plain technical English.
 
 ## Open items
-- **Testimonies:** approved, waiting for the week to clear. Player notes from the weekly dump, latest week only, on the player card and a Home tile. Points labeled "Standard PPR points." Expected Fantasy Points stay separate from Workload points. No small-sample or missing-context filters. Tags: New Calling (green), Back Pew (red), Manna and Fasting (neutral).
-- **Sermon second release:** Benediction from What's at Stake, plus dropped players, projection misses, Elo swings, and rivalry streaks. 5 of 42 weeks have only 3 lines today.
-- **Sermon third release:** rotating formats, after a few weeks of the new sermon. No ordinance-themed frames.
+- **Testimonies:** live with 7 Week 8 notes. The rest of the original dump was not saved.
 - No 2026 trade has involved three or more teams, so multi-team scoring has only been tested on a made-up trade.
