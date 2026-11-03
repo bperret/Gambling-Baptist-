@@ -4,5 +4,7 @@ data.json
 notes.draft.json
 values.json
 plans.json
+qbsplits.json
+trends.json
 *.png
 sim/

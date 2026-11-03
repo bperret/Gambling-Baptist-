@@ -1,5 +1,5 @@
 
-const DYK_SEED = 28;
+const DYK_SEED = 29;
 // League model built from the export file. Pure functions, no DOM.
 // Trades reversed within 48 hours: the later trade's adds are the earlier trade's drops, and the other way around
 function reversedTrades(txs) {
@@ -1523,7 +1523,7 @@ function workload(model) {
     T.tgt += x.tgt || 0; T.rzt += x.rzt || 0; T.att += x.att || 0; T.rz += x.rz || 0; T.tsnp = Math.max(T.tsnp, x.tsnp || 0);
     const pos = posOf(pid);
     if (pos === "RB") { T.rbAtt += x.att || 0; T.rbTgt += x.tgt || 0; T.rbRz += x.rz || 0; }
-    if (pos === "QB") return; // his carries and targets stay in the team totals above
+    if (pos === "QB") { if ((x.patt || 0) > 0) (T.qbs = T.qbs || []).push({ pid, patt: x.patt }); return; } // his carries and targets stay in the team totals above
     lines.push({ w, pid, pos, team: tm, x, y: actOf(w, pid), td: (x.rectd || 0) + (x.rushtd || 0) + (x.passtd || 0) });
   }));
   // Fit by position. Back-test: fit on the first 60% of weeks, test on the rest. Final model uses every week.
@@ -1624,6 +1624,19 @@ function wTrends(players, team, weeks, injuries) {
     T.move.gone = gone;
   });
 }
+// QB splits: target share by starter. The starter has the most pass attempts. A game where a second QB throws 10 or more is left out.
+function wQbSplits(W, tm) {
+  const tg = W.weeks.filter(w => W.team[w] && W.team[w][tm]), by = {};
+  tg.forEach(w => { const q = (W.team[w][tm].qbs || []).slice().sort((a, b) => b.patt - a.patt); if (!q.length || (q[1] && q[1].patt >= 10)) return; (by[q[0].pid] = by[q[0].pid] || []).push(w); });
+  const qbs = Object.entries(by).filter(([, ws]) => ws.length >= 2).map(([pid, ws]) => ({ pid, ws })).sort((a, b) => b.ws.length - a.ws.length).slice(0, 3);
+  if (qbs.length < 2) return null;
+  const rows = Object.values(W.players).filter(p => p.pos !== "QB" && p.weeks.some(x => x.tm === tm)).map(p => {
+    const cells = qbs.map(q => { const L = p.weeks.filter(x => x.tm === tm && q.ws.includes(x.w)); const d = L.reduce((a, x) => a + (W.team[x.w][tm].tgt || 0), 0); return L.length >= 2 && d ? L.reduce((a, x) => a + (x.tgt || 0), 0) / d : null; });
+    return { pid: p.pid, tgt: p.weeks.filter(x => x.tm === tm).reduce((a, x) => a + (x.tgt || 0), 0), cells };
+  }).filter(r => r.cells.filter(c => c != null).length >= 2).sort((a, b) => b.tgt - a.tgt).slice(0, 3);
+  return rows.length ? { qbs, rows } : null;
+}
+
 // With and without: the biggest share swing when a key teammate sits. Each side needs 2 games.
 function wWithout(W, tm, injuries) {
   const tg = W.weeks.filter(w => W.team[w] && W.team[w][tm]), ps = Object.values(W.players).filter(p => p.weeks.some(x => x.tm === tm));
@@ -3340,6 +3353,8 @@ function wTeam(W, tm) {
       h += `<div class="list">${T.tree.slice(0, 6).map(x => `<div class="row"><div><b>${pn(x.p.pid, nm(x.p.pid))}</b> ${trArrow(x.p)} ${roleTag(x.p.role)}<div class="muted sm">${esc(x.p.pos)} · ${esc(ownTag(x.p.pid))} · red zone ${shPct(x.p.rztSh)} · catch rate ${shPct(x.p.catchRate)}</div></div><div class="r">${shPct(x.p.tgtSh)}<small class="${moveCls(x.sh3, x.sh, 0.05)}">last 3 games ${shPct(x.sh3)}</small></div></div>`).join("")}</div>`;
       h += `<p class="fine">The bar splits all ${T.tgt} ${st.wTeam} targets over ${T.games} games. The number is his share in the games he played. Last 3 is green when up 5 points or more, red when down 5 or more.</p>`;
     }
+    { const Q = wQbSplits(W, st.wTeam); if (Q) { const last = pid => { const a = String(nm(pid)).replace(/\s+(Jr\.?|Sr\.?|II|III|IV)$/, "").split(" "); return a[a.length - 1]; };
+      h += `<h3>QB splits</h3><div class="scroll"><table class="data"><thead><tr><th>Target share</th>${Q.qbs.map(q => `<th>${esc(last(q.pid))} (${q.ws.length})</th>`).join("")}</tr></thead><tbody>${Q.rows.map(r => `<tr><td class="team">${pn(r.pid, nm(r.pid))}</td>${r.cells.map(c => `<td>${shPct(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div><p class="fine">Target share in the games he played with each starter. The number is that starter's games. The starter has the most pass attempts, and a game where a second QB threw 10 or more is left out.</p>`; } }
     if (T.field.length) {
       const f0 = T.field[0], f1b = T.field[1];
       const tk = f0.p.role === "Workhorse" || f0.sh >= 0.7 ? `${nm(f0.p.pid)} is a workhorse: ${shPct(f0.sh)} of the backfield's Workload points.` : f1b && f0.sh < 0.55 ? `A committee: ${nm(f0.p.pid)} ${shPct(f0.sh)}, ${nm(f1b.p.pid)} ${shPct(f1b.sh)}.` : `${nm(f0.p.pid)} leads the backfield with ${shPct(f0.sh)} of its Workload points.`;
