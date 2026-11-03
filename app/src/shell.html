@@ -204,6 +204,16 @@ details.explain p { margin: 0 16px 12px; color: var(--ink); max-width: 66ch; }
 .hero-h.st { font-size: 1.7rem; overflow-wrap: anywhere; }
 .sl { display: block; font-size: .72rem; font-weight: 750; letter-spacing: .05em; text-transform: uppercase; color: var(--brown); }
 .sermon-ben { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--line); line-height: 1.4; }
+.tag.t-fill { background: var(--tan-tint); color: var(--brown); border: 1px solid color-mix(in srgb, var(--tan) 80%, transparent); }
+.tr { font-size: .72rem; margin-left: 2px; }
+.tr.up { color: var(--win); } .tr.down { color: var(--loss); } .tr.fill { color: var(--brown); }
+.trgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 2px 0 6px; }
+.trgrid > div { display: flex; flex-direction: column; min-width: 0; }
+.trgrid .tv { font-family: var(--display); font-variation-settings: "wdth" 80; font-weight: 800; font-size: 1.35rem; line-height: 1.1; }
+svg.trchart { width: 100%; height: auto; display: block; margin-top: 8px; overflow: visible; }
+.insight { display: grid; gap: 4px; margin: 8px 0 10px; padding: 12px 14px; border-radius: 14px; background: var(--tan-tint); border: 1px solid color-mix(in srgb, var(--tan) 80%, transparent); }
+.insight .dk { font-size: .82rem; font-weight: 700; color: var(--brown); }
+.insight p { margin: 0; line-height: 1.4; }
 .tag.t-up { background: color-mix(in srgb, var(--win) 16%, transparent); color: var(--win); }
 .tag.t-down { background: color-mix(in srgb, var(--loss) 14%, transparent); color: var(--loss); }
 .sermon { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }

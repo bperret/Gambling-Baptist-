@@ -1,5 +1,5 @@
 
-const DYK_SEED = 27;
+const DYK_SEED = 28;
 // League model built from the export file. Pure functions, no DOM.
 // Trades reversed within 48 hours: the later trade's adds are the earlier trade's drops, and the other way around
 function reversedTrades(txs) {
@@ -1478,7 +1478,8 @@ function prophWeekStars(idx, week) {
 // Red zone targets (rzt) arrive only when above zero, so a missing value counts as zero.
 // Air yards are left out: Sleeper's rec_air_yd counts completed passes only (zero on every target-without-catch week),
 // so it measures the result of a target, not the opportunity.
-const W_FEATS = { QB: ["patt", "att", "rz"], RB: ["att", "rz", "tgt", "rzt"], WR: ["tgt", "rzt", "att"], TE: ["tgt", "rzt"] };
+// Quarterbacks stay out: nearly every dropback is his, so there is no share to read, and his points come from efficiency.
+const W_FEATS = { RB: ["att", "rz", "tgt", "rzt"], WR: ["tgt", "rzt", "att"], TE: ["tgt", "rzt"] };
 const W_MIN_R2 = 0.35; // back-test bar: below this the Workload points are shown with a warning
 
 // Least squares with an intercept and a light ridge, solved by Gaussian elimination
@@ -1522,6 +1523,7 @@ function workload(model) {
     T.tgt += x.tgt || 0; T.rzt += x.rzt || 0; T.att += x.att || 0; T.rz += x.rz || 0; T.tsnp = Math.max(T.tsnp, x.tsnp || 0);
     const pos = posOf(pid);
     if (pos === "RB") { T.rbAtt += x.att || 0; T.rbTgt += x.tgt || 0; T.rbRz += x.rz || 0; }
+    if (pos === "QB") return; // his carries and targets stay in the team totals above
     lines.push({ w, pid, pos, team: tm, x, y: actOf(w, pid), td: (x.rectd || 0) + (x.rushtd || 0) + (x.passtd || 0) });
   }));
   // Fit by position. Back-test: fit on the first 60% of weeks, test on the rest. Final model uses every week.
@@ -1552,7 +1554,7 @@ function workload(model) {
     const g = L.length, wpS = L.reduce((a, l) => a + (l.wp || 0), 0), act = L.reduce((a, l) => a + l.y, 0);
     const tgtSh = share(L, "tgt");
     const P = {
-      pid, pos, team: tm, g, weeks: L.map(l => ({ w: l.w, wp: l.wp, act: l.y, tgt: l.x.tgt || 0, att: l.x.att || 0, snp: l.x.snp || 0, tsnp: l.x.tsnp || 0, td: l.td })),
+      pid, pos, team: tm, g, weeks: L.map(l => ({ w: l.w, tm: l.team, wp: l.wp, act: l.y, tgt: l.x.tgt || 0, att: l.x.att || 0, snp: l.x.snp || 0, tsnp: l.x.tsnp || 0, td: l.td })),
       wp: wpS, act, gap: act - wpS, wpg: wpS / g, ppg: act / g, td: L.reduce((a, l) => a + l.td, 0),
       tgt: sum(L, "tgt"), rec: sum(L, "rec"), rzt: sum(L, "rzt"), att: sum(L, "att"), rz: sum(L, "rz"), patt: sum(L, "patt"),
       tgtSh, rztSh: share(L, "rzt"),
@@ -1571,7 +1573,80 @@ function workload(model) {
     P.role = wRole(P);
     players[pid] = P;
   });
+  wTrends(players, team, weeks, model.injuries || {});
   return { weeks, models, quality, r2Test, ok: r2Test != null && r2Test >= W_MIN_R2, players, team, lines };
+}
+
+/* ---------- Trends: last 3 team games against the earlier ones ----------
+   Shares are pooled (his touches over the team's) with the player's current team only, so a low-volume game counts for less.
+   One game far under his normal snaps is treated as an early exit and left out of his trend. */
+const TR_BAR = { tgt: 0.05, att: 0.10, snp: 0.10 };
+const TR_MIN_TOUCH = 4;  // touches a game in the window that carries the move
+const TR_ABSENT_SH = 0.12; // a teammate this big, gone for 2 of the last 3, explains a rise
+const trMedian = a => { const b = a.slice().sort((x, y) => x - y); return b.length ? b[Math.floor((b.length - 1) / 2)] : 0; };
+function trExits(P) {
+  const G = P.weeks.map(x => ({ w: x.w, sn: x.tsnp ? x.snp / x.tsnp : 0 }));
+  const low = i => { const m = trMedian(G.filter((_, k) => k !== i).map(x => x.sn)); return G.length >= 4 && m >= 0.5 && G[i].sn < m * 0.5; };
+  return G.filter((x, i) => low(i) && !(i > 0 && low(i - 1)) && !(i < G.length - 1 && low(i + 1))).map(x => x.w);
+}
+function wTrends(players, team, weeks, injuries) {
+  const games = tm => weeks.filter(w => team[w] && team[w][tm]);
+  const share = (L, f) => { const d = L.reduce((a, x) => a + ((team[x.w][x.tm] || {})[f] || 0), 0); return d ? L.reduce((a, x) => a + (x[f] || 0), 0) / d : null; };
+  const snap = L => { const d = L.reduce((a, x) => a + (x.tsnp || 0), 0); return d ? L.reduce((a, x) => a + (x.snp || 0), 0) / d : null; };
+  const touches = L => L.length ? L.reduce((a, x) => a + (x.tgt || 0) + (x.att || 0), 0) / L.length : 0;
+  Object.values(players).forEach(P => {
+    const tg = games(P.team), last3 = tg.slice(-3), exits = trExits(P);
+    const mine = P.weeks.filter(x => x.tm === P.team), L = mine.filter(x => !exits.includes(x.w));
+    const late = L.filter(x => last3.includes(x.w)), early = L.filter(x => !last3.includes(x.w));
+    const key = P.pos === "RB" ? "att" : "tgt", T = { key, exits, weeksLate: last3, series: P.weeks.map(x => ({ w: x.w, sh: (team[x.w][x.tm] || {})[key] ? (x[key] || 0) / team[x.w][x.tm][key] : 0, exit: exits.includes(x.w) })) };
+    const lastW = tg[tg.length - 1], lg = mine.find(x => x.w === lastW);
+    T.now = lg ? (team[lg.w][lg.tm][key] ? (lg[key] || 0) / team[lg.w][lg.tm][key] : 0) : null;
+    T.late = share(late, key); T.early = share(early, key); T.overall = share(mine, key);
+    T.snapLate = snap(late); T.snapEarly = snap(early); T.nLate = late.length; T.nEarly = early.length;
+    P.trend = T;
+    if (late.length < 2 || early.length < 2) return;
+    const opts = (P.pos === "RB" ? ["att", "tgt"] : ["tgt"]).map(f => ({ f, a: share(early, f), b: share(late, f) })).filter(o => o.a != null && o.b != null && Math.abs(o.b - o.a) >= TR_BAR[o.f]);
+    const pick = opts.sort((p, q) => Math.abs(q.b - q.a) / TR_BAR[q.f] - Math.abs(p.b - p.a) / TR_BAR[p.f])[0];
+    if (!pick) return;
+    const up = pick.b > pick.a;
+    if (touches(up ? late : early) < TR_MIN_TOUCH) return;
+    T.move = { f: pick.f, a: pick.a, b: pick.b, d: pick.b - pick.a, up, score: Math.abs(pick.b - pick.a) / TR_BAR[pick.f] };
+    if (!up) return;
+    // Who left the room? Risers only: a teammate's absence does not explain a fall.
+    let gone = null;
+    Object.values(players).forEach(Q => {
+      if (Q === P || (pick.f === "att" && Q.pos !== "RB")) return;
+      const was = Q.weeks.filter(x => x.tm === P.team && !last3.includes(x.w)); if (was.length < 2) return;
+      const sh = share(was, pick.f); if (sh == null || sh < TR_ABSENT_SH) return;
+      const missed = last3.filter(w => !Q.weeks.some(x => x.w === w && x.tm === P.team));
+      if (missed.length >= 2 && (!gone || sh > gone.sh)) gone = { pid: Q.pid, sh, missed, back: !missed.includes(last3[last3.length - 1]) ? last3[last3.length - 1] : null, status: (injuries[Q.pid] || {}).s || null, moved: Q.team !== P.team ? Q.team : null };
+    });
+    T.move.gone = gone;
+  });
+}
+// With and without: the biggest share swing when a key teammate sits. Each side needs 2 games.
+function wWithout(W, tm, injuries) {
+  const tg = W.weeks.filter(w => W.team[w] && W.team[w][tm]), ps = Object.values(W.players).filter(p => p.weeks.some(x => x.tm === tm));
+  const inTeam = (p, ws) => p.weeks.filter(x => x.tm === tm && ws.includes(x.w));
+  const share = (L, f) => { const d = L.reduce((a, x) => a + (W.team[x.w][tm][f] || 0), 0); return d ? L.reduce((a, x) => a + (x[f] || 0), 0) / d : null; };
+  const out = [];
+  ps.forEach(A => {
+    const f = A.pos === "RB" ? "att" : "tgt", mine = A.weeks.filter(x => x.tm === tm), first = mine.length ? mine[0].w : 99;
+    const on = tg.filter(w => mine.some(x => x.w === w)), off = tg.filter(w => w > first && !on.includes(w));
+    const sh = share(mine, f); if (sh == null || sh < 0.15 || on.length < 2 || off.length < 2) return;
+    // Stay current: he sat the latest game, or Sleeper lists him as unavailable today
+    const status = (injuries[A.pid] || {}).s || null, recent = off.includes(tg[tg.length - 1]);
+    if (!recent && !["Out", "IR", "Doubtful", "PUP", "Sus", "NA"].includes(status)) return;
+    let best = null;
+    ps.forEach(B => {
+      if (B === A || (f === "att" && B.pos !== "RB")) return;
+      const a = inTeam(B, off), b = inTeam(B, on); if (a.length < 2 || b.length < 2) return;
+      const x = share(a, f), y = share(b, f); if (x == null || y == null || x - y < TR_BAR[f]) return;
+      if (!best || x - y > best.x - best.y) best = { pid: B.pid, x, y, nx: a.length, ny: b.length };
+    });
+    if (best) out.push({ star: A.pid, f, best, status, moved: A.team !== tm ? A.team : null });
+  });
+  return out.sort((p, q) => Math.abs(q.best.x - q.best.y) - Math.abs(p.best.x - p.best.y)).slice(0, 3);
 }
 
 // Role labels need 3 games
@@ -1631,7 +1706,12 @@ function wTeam(W, tm) {
   const ownTag = pid => { const o = Object.entries(st.model.latest.currentRosters || {}).find(([, r]) => r.includes(pid)); return o ? ownerName(o[0]) : "Free agent"; };
   const shPct = x => x == null ? "–" : Math.round(x * 100) + "%";
   const roleTag = r => r ? `<span class="tag role">${esc(r)}</span>` : "";
-  const moveCls = (now, base) => now == null || base == null ? "" : now - base >= 0.03 ? "w" : now - base <= -0.03 ? "l" : "muted";
+  const moveCls = (now, base, bar) => now == null || base == null ? "" : now - base >= (bar || 0.05) ? "w" : now - base <= -(bar || 0.05) ? "l" : "muted";
+  const TR_NAME = { tgt: "Target share", att: "Rush share" };
+  const trIsFill = T => !!(T && T.move && T.move.gone);
+  const trArrow = p => { const m = p.trend && p.trend.move; if (!m) return ""; const fill = !!m.gone; return `<span class="tr ${fill ? "fill" : m.up ? "up" : "down"}" role="img" aria-label="${esc(TR_NAME[m.f])} ${m.up ? "up" : "down"} ${Math.abs(Math.round(m.d * 1000) / 10)} points, last 3 games${fill ? ", filling in" : ""}">${m.up ? "▲" : "▼"}</span>`; };
+  const trGone = g => { const n = (st.model.players[g.pid] || [g.pid])[0]; return `${esc(n)}: ${g.moved ? `now with ${esc(g.moved)}` : g.back ? `back in Week ${g.back}` : g.status ? esc(g.status) : "out of the lineup"}`; };
+  const trMoved = x => x.moved ? `now with ${esc(x.moved)}` : x.status ? esc(x.status) : "out of the lineup";
   const prOf = s => { st.prCache = st.prCache || {}; return s.year in st.prCache ? st.prCache[s.year] : (st.prCache[s.year] = prophecy(s, st.model.projections)); };
   const T = (uid, s) => `<b>${esc(teamIn(uid, s))}</b> <span class="muted">(${esc(ownerName(uid))})</span>`;
   const sec = (title, kick) => `<h2>${esc(title)}</h2>${kick ? `<p class="kick">${kick}</p>` : ""}`;
@@ -3151,11 +3231,11 @@ function wTeam(W, tm) {
       h += `<div class="pc-sec"><h3>${esc(L0.year)} workload ${roleTag(U.role)}</h3>`;
       h += `<p class="pc-line">Workload points ${f1(U.wpg)} a game, scored ${f1(U.ppg)}: <b class="${U.gap > 0 ? "w" : U.gap < 0 ? "l" : ""}">${sign(U.gap)}</b> over ${U.g} ${U.g === 1 ? "game" : "games"}, ${U.td} ${U.td === 1 ? "touchdown" : "touchdowns"}.</p>`;
       const rows = [];
-      if (U.pos !== "QB" && U.tgt) rows.push(["Target share", shPct(U.tgtSh), U.tgtSh3, U.tgtSh], ["Red zone targets", `${U.rzt} (${shPct(U.rztSh)} of the team's)`], ["Catch rate", shPct(U.catchRate)]);
-      if (U.pos === "RB") rows.push(["Backfield share", shPct(U.bfSh), U.bfSh3, U.bfSh], ["Red zone carries", `${U.rz} (${shPct(U.rbRzSh)} of the backs')`]);
-      if (U.pos === "QB") rows.push(["Pass attempts", String(U.patt)], ["Carries", String(U.att)]);
-      rows.push(["Snap share", shPct(U.snapSh), U.snapSh3, U.snapSh]);
-      h += `<div class="list">${rows.map(([k, v, n3, base]) => `<div class="row"><div>${k}</div><div class="r">${v}${n3 !== undefined ? `<small class="${moveCls(n3, base)}">last 3 games ${shPct(n3)}</small>` : ""}</div></div>`).join("")}</div>`;
+      if (U.tgt) rows.push(["Target share", shPct(U.tgtSh), U.tgtSh3, U.tgtSh, 0.05], ["Red zone targets", `${U.rzt} (${shPct(U.rztSh)} of the team's)`], ["Catch rate", shPct(U.catchRate)]);
+      if (U.pos === "RB") rows.push(["Backfield share", shPct(U.bfSh), U.bfSh3, U.bfSh, 0.10], ["Red zone carries", `${U.rz} (${shPct(U.rbRzSh)} of the backs')`]);
+      rows.push(["Snap share", shPct(U.snapSh), U.snapSh3, U.snapSh, 0.10]);
+      h += trendCard(U);
+      h += `<div class="list">${rows.map(([k, v, n3, base, bar]) => `<div class="row"><div>${k}</div><div class="r">${v}${n3 !== undefined ? `<small class="${moveCls(n3, base, bar)}">last 3 games ${shPct(n3)}</small>` : ""}</div></div>`).join("")}</div>`;
       h += `<div class="wstrip">${U.weeks.map(x => { const d = x.wp != null ? x.act - x.wp : null; const c = d == null ? "none" : d > 0 ? "up" : d < 0 ? "down" : "even"; const t = `Week ${x.w}: ${x.tgt} targets, ${x.att} carries, ${x.tsnp ? Math.round(x.snp / x.tsnp * 100) + "% of snaps" : x.snp + " snaps"}. Workload ${f1(x.wp)}, scored ${f1(x.act)}.`; return `<div class="wcell ${c}" title="${esc(t)}" aria-label="${esc(t)}"><span class="wk">${x.w}</span><span class="wv">${d == null ? "–" : sign(d)}</span></div>`; }).join("")}</div>`;
       h += `<p class="fine">Each box: points scored against Workload points, the points his usage that week is usually worth in this league. Missing weeks are games he did not play.</p></div>`;
     }
@@ -3190,6 +3270,37 @@ function wTeam(W, tm) {
     if (pcOpener && document.contains(pcOpener)) pcOpener.focus(); pcOpener = null;
   }
 
+  // Player card: this week, last 3, and earlier, over a weekly chart
+  function trendCard(U) {
+    const T = U.trend; if (!T || T.series.length < 2) return "";
+    const lab = TR_NAME[T.key], m = T.move, S = T.series, W = 320, H = 96, L = 26, R = 8, top = 8, bot = 18;
+    const maxY = Math.max(0.2, ...S.map(x => x.sh), T.overall || 0) * 1.08;
+    const first = S[0].w, last = S[S.length - 1].w, x = w => L + (W - L - R) * (last === first ? 0.5 : (w - first) / (last - first)), y = v => top + (H - top - bot) * (1 - v / maxY);
+    const seg = []; S.forEach((p, i) => { if (i && S[i - 1].w === p.w - 1) seg.push(`<line class="line" x1="${x(S[i - 1].w).toFixed(1)}" y1="${y(S[i - 1].sh).toFixed(1)}" x2="${x(p.w).toFixed(1)}" y2="${y(p.sh).toFixed(1)}"/>`); });
+    const dots = S.map(p => `<circle class="dot${p.exit ? " lost" : ""}" cx="${x(p.w).toFixed(1)}" cy="${y(p.sh).toFixed(1)}" r="3.5"><title>Week ${p.w}: ${shPct(p.sh)}${p.exit ? ", early exit" : ""}</title></circle>`).join("");
+    const avg = T.overall != null ? `<line class="refline" x1="${L}" x2="${W - R}" y1="${y(T.overall).toFixed(1)}" y2="${y(T.overall).toFixed(1)}"/>` : "";
+    const ticks = S.map(p => `<text class="tick" x="${x(p.w).toFixed(1)}" y="${H - 5}" text-anchor="middle">${p.w}</text>`).join("");
+    const yt = [0, Math.round(maxY * 10) / 20].map(v => `<text class="tick" x="${L - 5}" y="${(y(v) + 3).toFixed(1)}" text-anchor="end">${Math.round(v * 100)}</text>`).join("");
+    const cell = (k, v) => `<div><span class="mk">${k}</span><span class="tv">${shPct(v)}</span></div>`;
+    const line = m ? `<p class="pc-line">${trArrow(U)} ${esc(TR_NAME[m.f])} ${m.up ? "up" : "down"} <b>${f1(Math.abs(m.d) * 100)} points</b>, ${shPct(m.a)} to ${shPct(m.b)}.${m.gone ? ` <span class="tag t-fill">Filling In</span> ${trGone(m.gone)}.` : ""}</p>` : "";
+    return `<h3>${esc(lab)} trend</h3><div class="trgrid">${cell("This week", T.now)}${cell("Last 3 games", T.late)}${cell("Earlier", T.early)}</div>${line}<svg class="chart trchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(lab)} by week">${avg}${seg.join("")}${dots}${ticks}${yt}</svg><p class="fine">Each dot is a week. The dashed line is his season share.${T.exits.length ? ` An open dot is an early exit (Week ${T.exits.join(", ")}), left out of Last 3 and Earlier.` : ""}</p>`;
+  }
+
+  // Movers: risers, fill-ins, and fallers across the league
+  function moversBlock(W, nm) {
+    const all = Object.values(W.players).filter(p => p.trend && p.trend.move).sort((a, b) => b.trend.move.score - a.trend.move.score);
+    if (!all.length) return "";
+    const lw = W.weeks[W.weeks.length - 1], groups = [["New Calling", "t-up", all.filter(p => p.trend.move.up && !p.trend.move.gone)], ["Filling In", "t-fill", all.filter(p => p.trend.move.gone)], ["Back Pew", "t-down", all.filter(p => !p.trend.move.up)]];
+    const room = st.wMove || "New Calling", cur = groups.find(g => g[0] === room) || groups[0];
+    const list = st.wMoveAll ? cur[2] : cur[2].slice(0, 6);
+    const row = p => { const m = p.trend.move; return `<div class="row"><div><b>${pn(p.pid, nm(p.pid))}</b> ${trArrow(p)}<div class="muted sm">${esc(p.pos)} · ${esc(p.team)} · ${esc(ownTag(p.pid))}${m.gone ? ` · for ${trGone(m.gone)}` : ""}${p.trend.exits.length ? ` · Week ${p.trend.exits.join(", ")} left out` : ""}</div></div><div class="r ${m.gone ? "" : m.up ? "w" : "l"}">${m.up ? "+" : "−"}${f1(Math.abs(m.d) * 100)}<small>${esc(TR_NAME[m.f])} ${shPct(m.a)} to ${shPct(m.b)}</small></div></div>`; };
+    let h = `<h3>Movers</h3><p class="fine top">Last 3 team games against the earlier ones, through Week ${lw}.</p><div class="chips wrap" role="group" aria-label="Movers">${groups.map(g => `<button type="button" data-wmove="${esc(g[0])}" aria-pressed="${g[0] === cur[0]}">${esc(g[0])} ${g[2].length}</button>`).join("")}</div>`;
+    h += list.length ? `<div class="list">${list.map(row).join("")}</div>` : `<p class="empty">No one here this week.</p>`;
+    if (cur[2].length > 6) h += `<button type="button" class="more-cols" data-wmoveall="1">${st.wMoveAll ? "Show fewer" : `Show ${cur[2].length - 6} more`}</button>`;
+    h += `<details class="explain"><summary>How the Movers work</summary><p>Each man's last 3 team games are compared with his earlier games on the same team. A move counts at 5 points of target share or 10 points of rush share, with at least 2 games on each side and 4 touches a game in the window that carries the move.</p><p>One game far under his normal snaps counts as an early exit and is left out of his numbers. Back-to-back low games stay in, because that is a role change.</p><p>A riser becomes Filling In when a teammate with at least 12% of that work missed 2 of the last 3 team games. The status beside the name is today's from Sleeper. "Out of the lineup" means Sleeper lists no injury. Sleeper keeps no injury history by week, so absences are read from usage. A quarterback change is not detected.</p></details>`;
+    return h;
+  }
+
   /* ---------- The Laborers: 2026 usage ---------- */
   function work() {
     const s = season();
@@ -3202,20 +3313,23 @@ function wTeam(W, tm) {
     h += `<p class="fine top">${esc(s.year)}, weeks ${wk[0]} to ${wk[wk.length - 1]}. Shares count only the games a player played.</p>`;
     if (!W.ok) h += `<div class="warn"><b>Rough Workload points.</b> Tested on weeks ${(Object.values(q)[0] || {}).testWeeks ? Object.values(q)[0].testWeeks.join(", ") : ""}, usage explains only ${W.r2Test != null ? Math.round(W.r2Test * 100) : 0}% of weekly scoring so far. Treat them as a loose guide. Shares are exact.</div>`;
 
+    h += moversBlock(W, nm);
+
     // Leaders
     const pos = st.wPos || "all";
-    const pool = Object.values(W.players).filter(p => p.g >= 3 && p.wp != null && (pos === "all" ? p.pos !== "QB" : p.pos === pos)).sort((a, b) => b.wpg - a.wpg);
-    h += `<h3>Most work</h3><div class="chips" role="group" aria-label="Position">${[["all", "RB, WR, TE"], ["QB", "QB"], ["RB", "RB"], ["WR", "WR"], ["TE", "TE"]].map(([k, l]) => `<button type="button" data-wpos="${k}" aria-pressed="${pos === k}">${l}</button>`).join("")}</div>`;
+    const pool = Object.values(W.players).filter(p => p.g >= 3 && p.wp != null && (pos === "all" || p.pos === pos)).sort((a, b) => b.wpg - a.wpg);
+    h += `<h3>Most work</h3><div class="chips" role="group" aria-label="Position">${[["all", "All"], ["RB", "RB"], ["WR", "WR"], ["TE", "TE"]].map(([k, l]) => `<button type="button" data-wpos="${k}" aria-pressed="${pos === k}">${l}</button>`).join("")}</div>`;
     const show = st.wAll ? pool.slice(0, 60) : pool.slice(0, 12);
-    h += `<div class="list">${show.map((p, i) => `<div class="row"><div><span class="rank">${i + 1}</span><b>${pn(p.pid, nm(p.pid))}</b> ${roleTag(p.role)}<div class="muted sm">${esc(p.pos)} · ${esc(p.team)} · ${esc(ownTag(p.pid))} · ${p.g} games, ${p.td} TD</div></div><div class="r">${f1(p.wpg)}<small>scored ${f1(p.ppg)}, <span class="${p.gap > 0 ? "w" : p.gap < 0 ? "l" : ""}">${sign(p.gap / p.g)}</span> a game</small></div></div>`).join("")}</div>`;
+    h += `<div class="list">${show.map((p, i) => `<div class="row"><div><span class="rank">${i + 1}</span><b>${pn(p.pid, nm(p.pid))}</b> ${trArrow(p)} ${roleTag(p.role)}<div class="muted sm">${esc(p.pos)} · ${esc(p.team)} · ${esc(ownTag(p.pid))} · ${p.g} games, ${p.td} TD</div></div><div class="r">${f1(p.wpg)}<small>scored ${f1(p.ppg)}, <span class="${p.gap > 0 ? "w" : p.gap < 0 ? "l" : ""}">${sign(p.gap / p.g)}</span> a game</small></div></div>`).join("")}</div>`;
     if (pool.length > 12) h += `<button type="button" class="more-cols" data-wall="1">${st.wAll ? "Show fewer" : `Show ${Math.min(60, pool.length) - 12} more`}</button>`;
-    h += `<p class="fine">Workload points a game, players with 3 or more games. Green means he scored more than his usage is usually worth; red, less. The gap is mostly touchdowns.</p>`;
+    h += `<p class="fine">Workload points a game, players with 3 or more games. Green means he scored more than his usage is usually worth; red, less. The gap is mostly touchdowns. An arrow marks a Mover; a tan arrow means he is filling in.</p>`;
 
     // Team by team
     const teams = [...new Set(Object.values(W.players).map(p => p.team))].filter(t => t && t !== "?").sort();
     if (!st.wTeam || !teams.includes(st.wTeam)) { const mine = st.me ? Object.values(W.players).filter(p => (st.model.latest.currentRosters[st.me] || []).includes(p.pid) && p.pos !== "QB").sort((a, b) => b.wp - a.wp)[0] : null; st.wTeam = mine ? mine.team : teams[0]; }
     const T = wTeam(W, st.wTeam);
     h += `<h3>Team by team</h3><div class="pick"><select id="wTeam" aria-label="NFL team">${teams.map(t => `<option value="${esc(t)}"${t === st.wTeam ? " selected" : ""}>${esc(t)}</option>`).join("")}</select></div>`;
+    { const wo = wWithout(W, st.wTeam, st.model.injuries || {}); if (wo.length) h += `<div class="insight"><span class="dk">With and without</span>${wo.map(x => { const lb = x.f === "att" ? "rush share" : "target share", B = x.best, game = n => `${n} ${n === 1 ? "game" : "games"}`; return `<p>Without <b>${pn(x.star, nm(x.star))}</b> (${trMoved(x)}): <b>${pn(B.pid, nm(B.pid))}</b> ${shPct(B.x)} ${lb} in ${game(B.nx)}. With him: ${shPct(B.y)} in ${game(B.ny)}.</p>`; }).join("")}</div>`; }
     const bar = (segs, label) => `<div class="wbar" role="img" aria-label="${esc(label)}">${segs.map(x => `<span class="${x.cls}" style="width:${Math.max(0, x.sh * 100).toFixed(1)}%" title="${esc(x.t)}"></span>`).join("")}</div>`;
     const top = T.tree.slice(0, 5), restSh = Math.max(0, 1 - top.reduce((a, x) => a + x.sh, 0));
     const lead = T.tree[0];
@@ -3223,15 +3337,15 @@ function wTeam(W, tm) {
       const second = T.tree[1];
       const tk = lead.p.tgtSh >= 0.25 ? `${nm(lead.p.pid)} is the alpha: ${shPct(lead.p.tgtSh)} of the targets in his games, ${shPct(lead.p.rztSh)} of the red zone targets.` : second && lead.sh - second.sh < 0.04 ? `No clear top target: ${nm(lead.p.pid)} and ${nm(second.p.pid)} split the looks.` : `${nm(lead.p.pid)} leads with ${shPct(lead.p.tgtSh)} of the targets in his games.`;
       h += `<p class="takeaway">${esc(tk)}</p>${bar(top.map(x => ({ cls: POS_CLASS[x.p.pos] ? "s-" + POS_CLASS[x.p.pos] : "s-ot", sh: x.sh, t: `${nm(x.p.pid)} ${shPct(x.sh)}` })).concat([{ cls: "s-rest", sh: restSh, t: `Everyone else ${shPct(restSh)}` }]), `Target share for ${st.wTeam}`)}`;
-      h += `<div class="list">${T.tree.slice(0, 6).map(x => `<div class="row"><div><b>${pn(x.p.pid, nm(x.p.pid))}</b> ${roleTag(x.p.role)}<div class="muted sm">${esc(x.p.pos)} · ${esc(ownTag(x.p.pid))} · red zone ${shPct(x.p.rztSh)} · catch rate ${shPct(x.p.catchRate)}</div></div><div class="r">${shPct(x.p.tgtSh)}<small class="${moveCls(x.sh3, x.sh)}">last 3 games ${shPct(x.sh3)}</small></div></div>`).join("")}</div>`;
-      h += `<p class="fine">The bar splits all ${T.tgt} ${st.wTeam} targets over ${T.games} games. The number is his share in the games he played. Last 3 is green when up 3 points or more, red when down.</p>`;
+      h += `<div class="list">${T.tree.slice(0, 6).map(x => `<div class="row"><div><b>${pn(x.p.pid, nm(x.p.pid))}</b> ${trArrow(x.p)} ${roleTag(x.p.role)}<div class="muted sm">${esc(x.p.pos)} · ${esc(ownTag(x.p.pid))} · red zone ${shPct(x.p.rztSh)} · catch rate ${shPct(x.p.catchRate)}</div></div><div class="r">${shPct(x.p.tgtSh)}<small class="${moveCls(x.sh3, x.sh, 0.05)}">last 3 games ${shPct(x.sh3)}</small></div></div>`).join("")}</div>`;
+      h += `<p class="fine">The bar splits all ${T.tgt} ${st.wTeam} targets over ${T.games} games. The number is his share in the games he played. Last 3 is green when up 5 points or more, red when down 5 or more.</p>`;
     }
     if (T.field.length) {
       const f0 = T.field[0], f1b = T.field[1];
       const tk = f0.p.role === "Workhorse" || f0.sh >= 0.7 ? `${nm(f0.p.pid)} is a workhorse: ${shPct(f0.sh)} of the backfield's Workload points.` : f1b && f0.sh < 0.55 ? `A committee: ${nm(f0.p.pid)} ${shPct(f0.sh)}, ${nm(f1b.p.pid)} ${shPct(f1b.sh)}.` : `${nm(f0.p.pid)} leads the backfield with ${shPct(f0.sh)} of its Workload points.`;
       const vul = T.field.find(x => x.p.role === "Vulture");
       h += `<h3>Backfield</h3><p class="takeaway">${esc(tk)}${vul ? ` ${esc(nm(vul.p.pid))} vultures the red zone.` : ""}</p>${bar(T.field.slice(0, 4).map((x, i) => ({ cls: "s-b" + i, sh: x.sh, t: `${nm(x.p.pid)} ${shPct(x.sh)}` })), `Backfield split for ${st.wTeam}`)}`;
-      h += `<div class="list">${T.field.slice(0, 4).map(x => `<div class="row"><div><b>${pn(x.p.pid, nm(x.p.pid))}</b> ${roleTag(x.p.role)}<div class="muted sm">${esc(ownTag(x.p.pid))} · carries ${shPct(x.p.rbAttSh)} · targets ${shPct(x.p.rbTgtSh)} · red zone ${shPct(x.p.rbRzSh)}</div></div><div class="r">${shPct(x.sh)}<small class="${moveCls(x.sh3, x.sh)}">last 3 games ${shPct(x.sh3)}</small></div></div>`).join("")}</div>`;
+      h += `<div class="list">${T.field.slice(0, 4).map(x => `<div class="row"><div><b>${pn(x.p.pid, nm(x.p.pid))}</b> ${trArrow(x.p)} ${roleTag(x.p.role)}<div class="muted sm">${esc(ownTag(x.p.pid))} · carries ${shPct(x.p.rbAttSh)} · targets ${shPct(x.p.rbTgtSh)} · red zone ${shPct(x.p.rbRzSh)}</div></div><div class="r">${shPct(x.sh)}<small class="${moveCls(x.sh3, x.sh, 0.10)}">last 3 games ${shPct(x.sh3)}</small></div></div>`).join("")}</div>`;
       h += `<p class="fine">Backfield share is each back's part of the running backs' Workload points, so a target counts for more than a carry. Carries, targets, and red zone are shares among the backs.</p>`;
     }
 
@@ -3242,13 +3356,13 @@ function wTeam(W, tm) {
     if (lu.length) {
       h += `<h3>Luck of the draw</h3><p class="takeaway">${esc(ownerName(lu[0].uid))}'s starters outscored their workload by ${f1(lu[0].gap)} points. ${esc(ownerName(lu[lu.length - 1].uid))}'s came up ${f1(Math.abs(lu[lu.length - 1].gap))} short.</p>`;
       h += `<div class="list">${lu.map(b => `<div class="row${b.uid === st.me ? " me-row" : ""}"><div>${whoInline(b.uid, s)}<div class="muted sm">${f1(b.wp)} Workload points, ${b.td} touchdowns</div></div><div class="r ${b.gap > 0 ? "w" : b.gap < 0 ? "l" : ""}">${sign(b.gap)}<small>${f1(b.act)} scored</small></div></div>`).join("")}</div>`;
-      h += `<p class="fine">Starters only, kickers and defenses left out. Points above the workload mostly come from touchdowns and long plays, which rarely repeat at the same rate.</p>`;
+      h += `<p class="fine">Starters only. Quarterbacks, kickers, and defenses are left out. Points above the workload mostly come from touchdowns and long plays, which rarely repeat at the same rate.</p>`;
     }
 
     // Method
     const val = (pos, f, mult) => W.models[pos] && W.models[pos].w[f] != null ? f2(W.models[pos].w[f] * (mult || 1)) : "–";
     const qs = Object.entries(q).map(([k, x]) => `${k} ${x.r2Test != null ? Math.round(x.r2Test * 100) + "%" : "not tested"}`).join(", ");
-    h += `<details class="explain"><summary>How Workload points work</summary><p>Workload points are the points a player's usage is usually worth in this league, scored the league's way, first downs included. They are fitted each week from every 2026 game: league points against targets, red zone targets, carries, and red zone carries, by position (pass attempts for quarterbacks).</p><p>What usage is worth right now: for wide receivers a target is ${val("WR", "tgt")} points and a red zone target adds ${val("WR", "rzt")}; for running backs a carry is ${val("RB", "att")}, a red zone carry adds ${val("RB", "rz")}, and a target is ${val("RB", "tgt")}; for tight ends a target is ${val("TE", "tgt")}.</p><p>The test: fitted on the earlier weeks and checked on the later ones, usage explains this share of weekly scoring: ${esc(qs)}. Touchdowns and big plays make up most of the rest.</p><p>Limits: Sleeper sends weekly totals, not each play, so field position comes only from red zone carries and targets. Sleeper's air yards count only caught passes, so they measure results, not opportunity, and are left out: no aDOT, air yards share, or WOPR. There is no route data, so no targets per route run. This is not the play-by-play expected points the paid sites sell.</p></details>`;
+    h += `<details class="explain"><summary>How Workload points work</summary><p>Workload points are the points a player's usage is usually worth in this league, scored the league's way, first downs included. They are fitted each week from every 2026 game: league points against targets, red zone targets, carries, and red zone carries, by position. Quarterbacks are left out, because nearly every dropback is theirs and their points come mostly from efficiency.</p><p>What usage is worth right now: for wide receivers a target is ${val("WR", "tgt")} points and a red zone target adds ${val("WR", "rzt")}; for running backs a carry is ${val("RB", "att")}, a red zone carry adds ${val("RB", "rz")}, and a target is ${val("RB", "tgt")}; for tight ends a target is ${val("TE", "tgt")}.</p><p>The test: fitted on the earlier weeks and checked on the later ones, usage explains this share of weekly scoring: ${esc(qs)}. Touchdowns and big plays make up most of the rest.</p><p>Limits: Sleeper sends weekly totals, not each play, so field position comes only from red zone carries and targets. Sleeper's air yards count only caught passes, so they measure results, not opportunity, and are left out: no aDOT, air yards share, or WOPR. There is no route data, so no targets per route run. This is not the play-by-play expected points the paid sites sell.</p></details>`;
     return h;
   }
 
@@ -3695,6 +3809,8 @@ function wTeam(W, tm) {
     if (b.dataset.tvadd) { tvAddToTrade(b.dataset.tvadd); return; }
     if (b.dataset.wpos) { st.wPos = b.dataset.wpos; st.wAll = false; render(); return; }
     if (b.dataset.wall) { st.wAll = !st.wAll; render(); return; }
+    if (b.dataset.wmove) { st.wMove = b.dataset.wmove; st.wMoveAll = false; render(); return; }
+    if (b.dataset.wmoveall) { st.wMoveAll = !st.wMoveAll; render(); return; }
     if (b.dataset.shopwant) { st.shopWant = b.dataset.shopwant; render(); return; }
     if (b.dataset.shop) { const [who, i] = b.dataset.shop.split("|"); const t = st.shopPid && shopData(who, st.shopPid).rows[+i]; if (t) { st.multi = null; st.trade = { a: who, b: t.partner, aGets: t.get.slice(), bGets: t.send.slice() }; st.goto = "Build a Trade"; render(); } return; }
     if (b.dataset.idea) { const [who, i] = b.dataset.idea.split("|"); const t = tvIdeas(who)[+i]; if (t) { st.trade = { a: who, b: t.partner, aGets: t.get.slice(), bGets: t.send.slice() }; st.goto = "Build a Trade"; if (location.hash === "#advisor") render(); else location.hash = "advisor"; } return; }

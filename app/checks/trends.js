@@ -1,0 +1,10 @@
+// Dumps Movers and with-and-without lines to trends.json, and screenshots The Laborers.
+const {chromium}=require(require("child_process").execSync("npm root -g").toString().trim()+"/playwright");const http=require('http'),fs=require('fs'),path=require('path');const S=process.argv[2];
+const srv=http.createServer((q,r)=>{const f=path.join(S,q.url.split('?')[0].replace(/^\/$/,'/index.html'));if(fs.existsSync(f)){r.writeHead(200);r.end(fs.readFileSync(f));}else{r.writeHead(404);r.end('{}');}}).listen(8793,async()=>{
+const b=await chromium.launch();const c=await b.newContext({viewport:{width:390,height:844}});const p=await c.newPage();p.on('pageerror',e=>console.log('ERR',e.message));await p.goto('http://localhost:8793/');await p.waitForTimeout(2200);
+const o=await p.evaluate(()=>{const W=__wk(),M=__st.model,n=id=>(M.players[id]||[id])[0];const ms=Object.values(W.players).filter(x=>x.trend&&x.trend.move).map(x=>({pid:x.pid,n:n(x.pid),pos:x.pos,team:x.team,...x.trend.move,gone:x.trend.move.gone&&{...x.trend.move.gone,n:n(x.trend.move.gone.pid)},exits:x.trend.exits,nLate:x.trend.nLate,nEarly:x.trend.nEarly})).sort((a,b)=>b.score-a.score);const teams=[...new Set(Object.values(W.players).map(x=>x.team))].filter(t=>t&&t!=='?');const wo=[];teams.forEach(t=>__ww(W,t,M.injuries||{}).forEach(x=>wo.push({t,star:n(x.star),other:n(x.best.pid),f:x.f,x:x.best.x,nx:x.best.nx,y:x.best.y,ny:x.best.ny,st:x.status,moved:x.moved})));return {ms,wo,qb:Object.values(W.players).filter(x=>x.pos==='QB').length,quality:Object.fromEntries(Object.entries(W.quality).map(([k,v])=>[k,v.r2Test])),r2:W.r2Test,exits:Object.values(W.players).reduce((a,x)=>a+(x.trend?x.trend.exits.length:0),0)};});
+fs.writeFileSync('trends.json',JSON.stringify(o));
+await p.evaluate(()=>{location.hash='#work'});await p.waitForTimeout(600);
+const txt=await p.evaluate(()=>document.body.innerText);console.log('page has QB chip',/\nQB\n/.test(txt.slice(0,3000)),'bad',/undefined|NaN/.test(txt));
+await p.locator('main').screenshot({path:S+'/work.png'}).catch(e=>console.log(e.message));
+await b.close();srv.close();});

@@ -25,6 +25,7 @@ The live app is the source of truth. This branch holds a backup of the source, t
 - **Commands, from `app/`:** `python3 tools/build.py` builds `index.html`. `python3 tools/build.py --publish` also rotates Did You Know. Use it right before every publish.
 - **Checks, before every publish.** Put `playwright` in the module path (it is preinstalled). Make a folder `sim`, run `python3 checks/hook.py index.html sim/index.html`, and copy `data.json` and `values.json` into `sim`.
   - `node checks/tiles.js sim`: 12 award tiles every week, full rows at 2, 3, and 4 columns.
+  - `node checks/trends.js sim`, then `python3 checks/trends_recheck.py`: recomputes every Mover from raw data, with no app code.
   - `node checks/sermon.js sim 2026`: every week, no missing values, the two-line limit, no back-to-back repeats.
   - `node checks/views.js sim sim`: views at 360, 390, and 768 widths, light and dark, no errors or sideways scrolling.
   - `node checks/plans.js sim`, then `python3 checks/gates.py data.json`: rechecks the sermon gates and Week 8 facts from raw data.
@@ -54,6 +55,11 @@ The commissioner sends the export JSON (or uses the drop zone), Fantasy Spew and
 - **Draft (The Sower):** current season gap = trade value now minus the curve value at the pick. Past seasons use position rank, drafted vs. finished. Grades are curved by z-score, A+ to F.
 - **Weighed on the Scales:** each 2026 trade rescored with current values. Still even (10% or less), Leaning (30% or less), Spoiled like manna (beyond).
 - Playoff and toilet bowl games share one "With postseason" filter. Toilet bowl games count in Elo, rivalries, and everything else.
+- **The Laborers:** no quarterbacks anywhere: no QB fit, player card block, or Luck of the draw share. Their carries and targets still count in team totals.
+- **Trends (`wTrends`):** last 3 team games against earlier games, current team only, pooled shares. Bars: target share 5 points, rush share 10. Each side needs 2 games, and the window carrying the move needs 4 touches a game. Rush share is the headline for backs, target share for the rest; backs can move on either. Snap share never triggers a Mover.
+- **Early exit:** one isolated game under half his median snaps, when that median is 50% or more and he has 4+ games. Back-to-back low games stay in. It leaves his trend only.
+- **Filling In:** risers only. A teammate with 12%+ of that work in earlier games missed 2 of the last 3 team games. For rush share the teammate must be a back. Status reads now with a team, back in a week, Sleeper's status, or "out of the lineup."
+- **With and without (`wWithout`):** a teammate with 15%+ share, 2 games on each side, a rise of at least the bar for the other man, and he sat the latest game or is listed unavailable. Up to 3 lines a team. Quarterback changes are not detected.
 - **Recap awards:** always 12 tiles, by `recapTiles`. Priority: top and low score, blowout, close, tough, lucky, top player, upset, bad beat, regret, the two Prophecy tiles, Asleep, bench, then fill tiles (Good and Faithful, Armor of God, Best Foot Forward, Still Small Voice, Revival Meeting).
 - **Sermon:** `sermonBook()` plans every week in order, so past weeks never change. Bank lines rotate through every option before repeating.
   - Score: percentile against league history, plus 40 for a league record, 12 for a season high or low, 4 to 10 for a streak, and 14 for a standings change.
