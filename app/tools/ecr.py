@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # FantasyPros ROS ECR import. Usage: python3 ecr.py ecr.csv week.json
-# Adds sources.ecr to the week file and sets weights: ECR 50%, the other two sources 25% each.
+# Adds sources.ecr to the week file and sets every source in the week to 25%. The blend divides by the sources present.
 import csv, json, re, sys
 TEAM = {"JAC": "JAX", "WSH": "WAS", "LA": "LAR"}
 src, out = sys.argv[1], sys.argv[2]
@@ -18,8 +18,7 @@ with open(src, newline="") as f:
 ranks = [x["rk"] for x in rows]
 assert ranks == sorted(ranks) and len(set(ranks)) == len(ranks), "ranks out of order"
 wk = json.load(open(out))
-wk["sources"]["ecr"] = {"name": "FantasyPros ECR", "kind": "rank", "w": 0.5, "rows": rows}
-for k in wk["sources"]:
-    if k != "ecr": wk["sources"][k]["w"] = 0.25
+wk["sources"]["ecr"] = {"name": "FantasyPros ECR", "kind": "rank", "w": 0.25, "rows": rows}
+for k in wk["sources"]: wk["sources"][k]["w"] = 0.25
 json.dump(wk, open(out, "w"), indent=0)
 print(len(rows), "ECR rows;", sum(1 for x in rows if x["pos"] in ("K", "DEF")), "K/DEF")

@@ -1,5 +1,5 @@
 
-const DYK_SEED = 31;
+const DYK_SEED = 32;
 // League model built from the export file. Pure functions, no DOM.
 // Trades reversed within 48 hours: the later trade's adds are the earlier trade's drops, and the other way around
 function reversedTrades(txs) {
@@ -789,12 +789,10 @@ function tvConsensus(week, players) {
   const len = {}; keys.forEach(k => { len[k] = week.sources[k].rows.length; });
   const list = Object.values(byKey);
   list.forEach(e => {
-    // A source marked skipMissing leaves its gaps out of the blend. A one-week list drops bye teams, which says nothing about the player.
-    const use = keys.filter(k => e.src[k] || !week.sources[k].skipMissing);
-    const ranks = use.map(k => e.src[k] ? e.src[k].rank : len[k] + 1);
+    const ranks = keys.map(k => e.src[k] ? e.src[k].rank : len[k] + 1);
     e.nSrc = keys.filter(k => e.src[k]).length;
-    // Weighted average of ranks. A source without a weight counts as 1.
-    const wts = use.map(k => week.sources[k].w != null ? week.sources[k].w : 1);
+    // Weighted average of ranks. A source without a weight counts as 1. Only this week's sources are in the week, so a missing source takes no weight.
+    const wts = keys.map(k => week.sources[k].w != null ? week.sources[k].w : 1);
     e.crank = ranks.reduce((a, r, i) => a + r * wts[i], 0) / wts.reduce((a, b) => a + b, 0);
     e.spread = Math.max(...keys.filter(k => e.src[k]).map(k => e.src[k].rank)) - Math.min(...keys.filter(k => e.src[k]).map(k => e.src[k].rank));
     e.ppgAvg = e.ppg.length ? e.ppg.reduce((a, b) => a + b, 0) / e.ppg.length : null;

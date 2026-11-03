@@ -157,6 +157,6 @@ for ln in ROWS.strip().splitlines():
     rows.append({"name": n, "pos": pos, "team": "", "v": float(v), "ppg": float(ppg) if ppg else None, "inj": bool(inj)})
     trend[n] = tr
 json.dump(trend, open("charts/w2026-09.trend.json", "w"))
-wk = {"season": "2026", "week": 9, "loaded": "2026-11-03", "sources": {"rotoballer": {"name": "RotoBaller", "kind": "rank", "w": 0.25, "rows": []}, "menton": {"name": "Kyle Menton", "w": 0.25, "rows": rows}}}
+wk = {"season": "2026", "week": 9, "loaded": "2026-11-03", "sources": {"menton": {"name": "Kyle Menton", "w": 0.25, "rows": rows}}}
 json.dump(wk, open("week.json", "w"), indent=0)
 print(len(rows), "rows")

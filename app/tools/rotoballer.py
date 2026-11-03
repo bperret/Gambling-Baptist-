@@ -1,22 +1,15 @@
 #!/usr/bin/env python3
-"""RotoBaller PPR rankings import. Usage: python3 tools/rotoballer.py roto.csv ecr.csv week.json
-The file ranks RB, WR, and TE first and lists every QB after them, so its overall rank says nothing about QBs.
-K and DST are dropped. RotoBaller's QB order goes into the overall slots where FantasyPros ECR puts its top QBs."""
+"""RotoBaller rest-of-season PPR rankings import. Usage: python3 tools/rotoballer.py roto.csv week.json
+Use the ROS file: it lists every position on one overall scale and keeps teams on a bye.
+The one-week file leaves bye teams out and lists QBs after everyone else, so it does not fit."""
 import csv, json, sys
-roto, ecr, out = sys.argv[1:4]
-R = [r for r in csv.DictReader(open(roto, newline=""))]
-skill = [r for r in R if r["Pos"] in ("RB", "WR", "TE")]
-qbs = [r for r in R if r["Pos"] == "QB"]
-assert [int(r["RK"]) for r in skill] == sorted(int(r["RK"]) for r in skill)
-E_ = [r for r in csv.DictReader(open(ecr, newline="")) if (r.get("RK") or "").strip().isdigit() and not r["POS"].startswith(("K", "DST"))]
-slots = [i for i, r in enumerate(E_) if r["POS"].startswith("QB")][:len(qbs)]
-n = len(skill) + len(qbs); merged = [None] * n
-q = iter(qbs); s = iter(skill)
-for i in slots:
-    if i < n: merged[i] = next(q)
-for i in range(n):
-    if merged[i] is None:
-        merged[i] = next(s, None) or next(q)
-rows = [{"name": r["Player"].strip(), "pos": r["Pos"], "team": "" if r["Team"] in ("FA", "") else r["Team"], "rk": i + 1, "v": 1000 - (i + 1)} for i, r in enumerate(merged)]
-wk = json.load(open(out)); wk["sources"]["rotoballer"]["rows"] = rows; json.dump(wk, open(out, "w"), indent=0)
-print(len(rows), "rows;", len(qbs), "QBs, first at", [r["rk"] for r in rows if r["pos"] == "QB"][:4], "from raw rank", qbs[0]["RK"])
+roto, out = sys.argv[1:3]
+TEAM = {"JAC": "JAX", "WSH": "WAS", "LA": "LAR"}
+R = [r for r in csv.DictReader(open(roto, newline="")) if r["Pos"] in ("QB", "RB", "WR", "TE")]
+assert any(r["Opp"] == "BYE" for r in R), "no bye team listed: this looks like the one-week file"
+rows = [{"name": r["Player"].strip(), "pos": r["Pos"], "team": TEAM.get(r["Team"], r["Team"]), "rk": int(r["RK"]), "v": 1000 - int(r["RK"])} for r in R]
+assert [x["rk"] for x in rows] == sorted(x["rk"] for x in rows), "ranks out of order"
+wk = json.load(open(out))
+wk["sources"]["rotoballer"] = {"name": "RotoBaller", "kind": "rank", "w": 0.25, "rows": rows}
+json.dump(wk, open(out, "w"), indent=0)
+print(len(rows), "rows; first QB at", next(x["rk"] for x in rows if x["pos"] == "QB"))
