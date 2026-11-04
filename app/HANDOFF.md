@@ -45,7 +45,7 @@ The commissioner sends the export JSON (or uses the drop zone), the Reddit trade
 - **Trade value blend (Benton's rule, updated Nov 4):** FantasyPros ECR and the Reddit Market Adjusted chart (u/PeakedinHighSkool) at equal weight. Reddit replaced RotoBaller, Kyle Menton, and Fantasy Spew in Week 9. Equal shares still apply: a source with no file this week takes no weight, and the rest split it evenly.
   - Never carry a prior week's file forward. Once the new week's files start arriving, use only those, even if some are missing.
   - Weeks 7 and 8 stay as loaded. A replaced file overwrites that week's sources.
-  - Neither source has points per game, so lineup impact uses league points per game. Injury flags in trade ideas now come from Sleeper: Out, IR, Doubtful, PUP, Sus, NA, DNR, COV. Questionable does not count.
+  - Neither source has points per game, so lineup impact uses league points per game. Injury flags in trade ideas come from Sleeper: Questionable, Doubtful, Out, IR, PUP, Sus, NA, DNR, COV.
   - Ranks are computed within each source, with ties averaged. A player a source leaves out gets rank = that source's length + 1. The blend is a weighted average of ranks, re-ranked 1 to N. Value curve: `100*exp(-0.03605*(rank-1)^0.8665)`. K and DEF appear on the chart (ECR only) but are excluded from trade ideas.
 - **Tiers:** The Pulpit 85+, Deacon Board 70+, Choir Loft 58+, Front Pews 42+, Revival Tent 28+, Back Pews 20+, Mustard Seeds 13+, The Nursery 8+, Fellowship Hall Leftovers below 8.
 - **Trade math:** each value raised to the 1.5 power, plus roster-spot credit `tvAdj(10)` per extra player received by the other side. Labels: fair within 10%, leans within 30%, robbery beyond. Lineup impact uses chart points per game, falling back to league points per game.
@@ -59,6 +59,7 @@ The commissioner sends the export JSON (or uses the drop zone), the Reddit trade
 - **Draft (The Sower):** current season gap = trade value now minus the curve value at the pick. Past seasons use position rank, drafted vs. finished. Grades are curved by z-score, A+ to F.
 - **Weighed on the Scales:** each 2026 trade rescored with current values. Still even (10% or less), Leaning (30% or less), Spoiled like manna (beyond).
 - Playoff and toilet bowl games share one "With postseason" filter. Toilet bowl games count in Elo, rivalries, and everything else.
+- **Current rosters:** the latest scored week's rosters, then every move from that week on, replayed in time order. Trades made after that week's lineups locked sit in the same week, so a filter of later weeks only misses them.
 - **The Laborers:** no quarterbacks anywhere: no QB fit, player card block, or Luck of the draw share. Their carries and targets still count in team totals.
 - **Trends (`wTrends`):** last 3 team games against earlier games, current team only, pooled shares. Bars: target share 5 points, rush share 10. Each side needs 2 games, and the window carrying the move needs 4 touches a game. Rush share is the headline for backs, target share for the rest; backs can move on either. Snap share never triggers a Mover.
 - **Early exit:** one isolated game under half his median snaps, when that median is 50% or more and he has 4+ games. Back-to-back low games stay in. It leaves his trend only.

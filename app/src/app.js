@@ -1,5 +1,5 @@
 
-const DYK_SEED = 33;
+const DYK_SEED = 34;
 // League model built from the export file. Pure functions, no DOM.
 // Trades reversed within 48 hours: the later trade's adds are the earlier trade's drops, and the other way around
 function reversedTrades(txs) {
@@ -256,8 +256,10 @@ function buildLeague(raw) {
     const curRoster = {};
     teamWeeks.filter(t => t.week === lastW).forEach(t => { curRoster[t.uid] = new Set(t.roster); });
     const recent = new Set();
-    Object.values(s.transactions || {}).flat().filter(tx => (tx.leg || 0) > (lastW || 0)).sort((p, q) => (p.created || 0) - (q.created || 0)).forEach(tx => {
-      Object.keys(tx.adds || {}).forEach(pid => recent.add(pid));
+    // A move in the last scored week can come after that week's roster snapshot (a trade after kickoff, say), so that week's moves replay too.
+    // Replaying them in time order is safe: each player ends where his last move put him.
+    Object.values(s.transactions || {}).flat().filter(tx => (tx.leg || 0) >= (lastW || 0)).sort((p, q) => (p.created || 0) - (q.created || 0)).forEach(tx => {
+      if ((tx.leg || 0) > (lastW || 0)) Object.keys(tx.adds || {}).forEach(pid => recent.add(pid));
       Object.entries(tx.drops || {}).forEach(([pid, rid]) => { const u = rosterOwner[rid]; if (curRoster[u]) curRoster[u].delete(pid); });
       Object.entries(tx.adds || {}).forEach(([pid, rid]) => { const u = rosterOwner[rid]; if (curRoster[u]) curRoster[u].add(pid); });
     });
@@ -3147,8 +3149,8 @@ function wTeam(W, tm) {
     const weeksV = st.values.weeks.slice().sort((a, b) => (a.season + String(a.week).padStart(2, "0")).localeCompare(b.season + String(b.week).padStart(2, "0")));
     const cur = weeksV[weeksV.length - 1];
     const cons = tvConsensus(cur, raw.players || {});
-    // Injury flags come from Sleeper as well, since not every source marks them. Questionable players usually play, so they stay in.
-    cons.list.forEach(e => { const o = e.pid && (raw.injuries || {})[e.pid]; if (o && ["Out", "IR", "Doubtful", "PUP", "Sus", "NA", "DNR", "COV"].includes(o.s)) e.inj = true; });
+    // Injury flags come from Sleeper as well, since not every source marks them
+    cons.list.forEach(e => { const o = e.pid && (raw.injuries || {})[e.pid]; if (o && ["Questionable", "Out", "IR", "Doubtful", "PUP", "Sus", "NA", "DNR", "COV"].includes(o.s)) e.inj = true; });
     const hist = weeksV.map(wk => ({ season: wk.season, week: wk.week, cons: wk === cur ? cons : tvConsensus(wk, raw.players || {}) }));
     const prev = hist.length > 1 ? hist[hist.length - 2].cons : null;
     cons.list.forEach(e => { const p = prev && (e.pid ? prev.byPid[e.pid] : prev.list.find(x => x.key === e.key)); e.delta = p ? e.value - p.value : null; });

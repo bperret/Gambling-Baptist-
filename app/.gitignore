@@ -6,5 +6,6 @@ values.json
 plans.json
 qbsplits.json
 trends.json
+tvdump.json
 *.png
 sim/
