@@ -33,19 +33,19 @@ The live app is the source of truth. This branch holds a backup of the source, t
   - The older test scripts (`test4` to `test11`, `pubtest`, `mt-ui`, `g2`) were not recovered. Write a new check when work touches the drop zone, multi-team trades, or Spiritual Gifts.
 
 ## Weekly routine
-The commissioner sends the export JSON (or uses the drop zone), a Kyle Menton chart screenshot, the FantasyPros ROS ECR CSV (PPR, overall), and either a Fantasy Spew chart or a RotoBaller CSV.
-1. Transcribe the charts into a new week object: `{season, week, loaded, sources: {spew: {name, w, rows}, menton: {name, w, rows}}}`. Each row is `{name, pos, team, v, ppg, inj}`. Copy the last week in `values.json` for the format.
-2. Run `python3 tools/rotoballer.py roto.csv week.json` if there is a RotoBaller file, then `python3 tools/ecr.py ecr.csv week.json`. `charts/w2026-09.py` is the transcription pattern, and it records the chart's trend column as a check against last week.
+The commissioner sends the export JSON (or uses the drop zone), the Reddit trade value chart screenshot, and the FantasyPros ROS ECR CSV (PPR, overall).
+1. Transcribe the chart into a new week object: `{season, week, loaded, sources: {reddit: {name, w, rows}}}`. Each row is `{name, pos, team, v}`. Copy the last week in `values.json` for the format.
+2. Copy `charts/reddit-2026-09.py` for the new week, run it, then run `python3 tools/ecr.py ecr.csv week.json`.
 3. Append the week to `values.json` under `weeks`. Keep every week, because history drives Risers and Fallers and the trends.
 4. Report unmatched names, and add aliases to `TV_ALIAS` in `src/app.js`.
 5. If he pastes the Late-Round player notes, replace `notes.json` with the new week: `{season, week, source, notes: [{pid, tag, text}]}`. Keep rostered players only, rewrite each note, and report names that do not match. Tags: `call` New Calling (green), `pew` Back Pew (red), `manna` Manna, `fast` Fasting (neutral), or none. Label points "Standard PPR points." Expected Fantasy Points stay separate from Workload points. No small-sample or missing-context filters.
 6. Run the checks, run `build.py --publish`, publish, and commit.
 
 ## Model settings (do not change without being asked)
-- **Trade value blend (Benton's rule, Nov 3):** four sources at 25% each: FantasyPros ECR, Kyle Menton, Fantasy Spew, RotoBaller. A source with no file this week takes no weight at all, and the rest split it evenly, so three sources are one third each.
-  - Never carry a prior week's file forward. Once the new week's files start arriving, use only those, even if some are missing. Each new file gets the same equal share.
-  - Weeks 7 and 8 stay as loaded. Week 9 has ECR, Menton, and RotoBaller with no Spew.
-  - RotoBaller must be the rest-of-season file. `tools/rotoballer.py` refuses a file with no bye team, which is the one-week file.
+- **Trade value blend (Benton's rule, updated Nov 4):** FantasyPros ECR and the Reddit Market Adjusted chart (u/PeakedinHighSkool) at equal weight. Reddit replaced RotoBaller, Kyle Menton, and Fantasy Spew in Week 9. Equal shares still apply: a source with no file this week takes no weight, and the rest split it evenly.
+  - Never carry a prior week's file forward. Once the new week's files start arriving, use only those, even if some are missing.
+  - Weeks 7 and 8 stay as loaded. A replaced file overwrites that week's sources.
+  - Neither source has points per game, so lineup impact uses league points per game. Injury flags in trade ideas now come from Sleeper: Out, IR, Doubtful, PUP, Sus, NA, DNR, COV. Questionable does not count.
   - Ranks are computed within each source, with ties averaged. A player a source leaves out gets rank = that source's length + 1. The blend is a weighted average of ranks, re-ranked 1 to N. Value curve: `100*exp(-0.03605*(rank-1)^0.8665)`. K and DEF appear on the chart (ECR only) but are excluded from trade ideas.
 - **Tiers:** The Pulpit 85+, Deacon Board 70+, Choir Loft 58+, Front Pews 42+, Revival Tent 28+, Back Pews 20+, Mustard Seeds 13+, The Nursery 8+, Fellowship Hall Leftovers below 8.
 - **Trade math:** each value raised to the 1.5 power, plus roster-spot credit `tvAdj(10)` per extra player received by the other side. Labels: fair within 10%, leans within 30%, robbery beyond. Lineup impact uses chart points per game, falling back to league points per game.

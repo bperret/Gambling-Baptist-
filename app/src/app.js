@@ -1,5 +1,5 @@
 
-const DYK_SEED = 32;
+const DYK_SEED = 33;
 // League model built from the export file. Pure functions, no DOM.
 // Trades reversed within 48 hours: the later trade's adds are the earlier trade's drops, and the other way around
 function reversedTrades(txs) {
@@ -3147,6 +3147,8 @@ function wTeam(W, tm) {
     const weeksV = st.values.weeks.slice().sort((a, b) => (a.season + String(a.week).padStart(2, "0")).localeCompare(b.season + String(b.week).padStart(2, "0")));
     const cur = weeksV[weeksV.length - 1];
     const cons = tvConsensus(cur, raw.players || {});
+    // Injury flags come from Sleeper as well, since not every source marks them. Questionable players usually play, so they stay in.
+    cons.list.forEach(e => { const o = e.pid && (raw.injuries || {})[e.pid]; if (o && ["Out", "IR", "Doubtful", "PUP", "Sus", "NA", "DNR", "COV"].includes(o.s)) e.inj = true; });
     const hist = weeksV.map(wk => ({ season: wk.season, week: wk.week, cons: wk === cur ? cons : tvConsensus(wk, raw.players || {}) }));
     const prev = hist.length > 1 ? hist[hist.length - 2].cons : null;
     cons.list.forEach(e => { const p = prev && (e.pid ? prev.byPid[e.pid] : prev.list.find(x => x.key === e.key)); e.delta = p ? e.value - p.value : null; });
