@@ -413,6 +413,47 @@ table.pp td.l-al { white-space: normal; min-width: 58px; line-height: 1.25; }
 .asof-line { margin: 0; font-size: .82rem; font-weight: 650; color: var(--blue); }
 .me-ideas .go { margin-top: 8px; font: inherit; font-weight: 700; color: var(--blue); background: var(--surface); border: 0; border-radius: 999px; padding: 10px 16px; min-height: 44px; cursor: pointer; }
 
+/* Pulse dot: the vigil on Mondays, the Recap on Tuesdays */
+.ping { position: relative; }
+.ping::after { content: ""; position: absolute; top: 4px; right: 2px; width: 9px; height: 9px; border-radius: 50%; background: var(--loss); box-shadow: 0 0 0 0 color-mix(in srgb, var(--loss) 55%, transparent); animation: ping 1.6s ease-out infinite; }
+nav.bottom .ping::after { top: 9px; right: calc(50% - 17px); }
+@keyframes ping { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--loss) 55%, transparent); } 75%, 100% { box-shadow: 0 0 0 9px transparent; } }
+@media (prefers-reduced-motion: reduce) { .ping::after { animation: none; } }
+nav.bottom.six { grid-template-columns: repeat(6, 1fr); }
+
+/* Monday Night Vigil */
+.vg-tile { border-color: var(--blue); }
+.vg-tile-t { margin: 6px 0 0; font-weight: 600; line-height: 1.4; }
+.vg-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 14px 12px; margin: 12px 0 16px; }
+.vg-card.big { border: 2px solid var(--tan); background: linear-gradient(var(--tan-tint), var(--surface) 160px); }
+.vg-kick { margin: 0 0 8px; font-size: .74rem; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; color: var(--brown); }
+.vg-head { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; align-items: start; }
+.vg-side { min-width: 0; display: grid; gap: 2px; }
+.vg-side:last-child { text-align: right; }
+.vg-who { overflow-wrap: anywhere; line-height: 1.25; }
+.vg-who .muted { display: block; font-size: .82rem; }
+.vg-pts { font-family: var(--display); font-variation-settings: "wdth" 75; font-weight: 900; font-size: 2.1rem; line-height: 1; color: var(--ink); }
+.vg-left { font-size: .82rem; color: var(--muted); line-height: 1.35; overflow-wrap: anywhere; }
+.vg-gap { display: flex; flex-direction: column; align-items: center; padding-top: 18px; color: var(--muted); font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.vg-gap b { font-family: var(--display); font-variation-settings: "wdth" 80; font-size: 1.2rem; color: var(--loss); letter-spacing: 0; }
+.vg-fig { margin-top: 12px; }
+.vg-fig svg { max-width: 560px; }
+.vg-cap { padding-top: 6px !important; }
+.vg-cap b { color: var(--blue); }
+.chart .vg-zone { fill: var(--sky-tint); }
+.chart .vg-zero { stroke: var(--ink); stroke-width: 1.5; }
+.chart .vg-dot { fill: var(--tan); stroke: var(--surface); stroke-width: 1; }
+.chart .vg-dot.up { fill: var(--blue); }
+.chart .vg-now { fill: var(--loss); }
+.vg-need { margin: 0 0 6px; line-height: 1.45; }
+.vg-keys { margin: 0; padding-left: 18px; display: grid; gap: 6px; line-height: 1.4; }
+.vg-stakes { display: grid; gap: 4px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); font-size: .9rem; }
+.vg-confess { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--loss) 7%, var(--surface)); line-height: 1.4; font-size: .92rem; }
+.vg-confess .tag { margin: 0 4px 0 0; }
+.vg-row { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.vg-row p { margin: 4px 0 0; line-height: 1.4; }
+.vg-row-h { line-height: 1.3; }
+
 footer { color: var(--muted); font-size: .82rem; margin-top: 40px; border-top: 1px solid var(--line); padding-top: 12px; }
 @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 
@@ -583,8 +624,9 @@ body.pc-open { overflow: hidden; }
 <div class="wrap">
   <nav class="tabs" aria-label="Sections">
     <a href="#home">Home</a>
+    <a href="#vigil" hidden>MNF Vigil</a>
     <a href="#standings">Bulletin</a>
-    <a href="#week">Tuesday Recap</a>
+    <a href="#week">Weekly Recap</a>
     <a href="#advisor" data-desk="1">Trade Desk</a>
     <a href="#gifts">Spiritual Gifts</a>
     <a href="#prophets">Prophecy Check</a>
@@ -616,6 +658,7 @@ body.pc-open { overflow: hidden; }
 </div>
 <nav class="bottom" aria-label="Sections">
   <a href="#home"><svg viewBox="0 0 24 24"><path d="M12 3v4M10 5h4"/><path d="M5 21V11l7-4 7 4v10"/><path d="M10 21v-5h4v5"/></svg>Home</a>
+  <a href="#vigil" hidden><svg viewBox="0 0 24 24"><path d="M9 21h6M10 21V10h4v11"/><path d="M12 3c1.6 1.8 2 3 2 4a2 2 0 0 1-4 0c0-1 .4-2.2 2-4z"/></svg>Vigil</a>
   <a href="#standings"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Bulletin</a>
   <a href="#week"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Recap</a>
   <a href="#advisor" data-desk="1"><svg viewBox="0 0 24 24"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>Trades</a>

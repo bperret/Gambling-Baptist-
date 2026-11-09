@@ -16,7 +16,8 @@ The live app is the source of truth. This branch holds a backup of the source, t
   - Capabilities `{artifact: {}, user: {}}` are stored, so omit `capabilities`.
   - The live page carries its own source in `<script id="gb-src">` (JSON with `reset`, `shell`, `app`). `tools/build.py` keeps it current.
 - **Sleeper export page:** https://bperret.github.io/Gambling-Baptist-/ (branch `main`). League members never use it.
-  - It produces format `ffbc-sleeper-v3`: seasons with full `scoring_settings`, players, `injuries`, and `projections` (current season weeks 1 to now, scored with league settings, plus a `check` match rate).
+  - It produces format `ffbc-sleeper-v3`: seasons with full `scoring_settings`, players, `injuries`, and `projections` (current season weeks 1 to now, scored with league settings, plus a `check` match rate, plus `games`: this week's team, opponent, and date).
+  - `live` (added Nov 9): this week in progress. `rows` (lineups, starters_points, players_points), `teams` (`{opp, date, left}`; `left` means no player on that team has a stat line with games played this week), `pteam` (stat-line team per player), `statsOk`, `at`.
   - Claude's workspace cannot reach Sleeper. The commissioner runs the export on his phone.
 - **League:** Sleeper league ID 1384696142750564352, 12 teams, 3 seasons (2024 to 2026). Scoring: 1-point PPR, plus (since 2025) 0.5 per rushing or receiving first down and 0.25 per passing first down. Slots: QB, RB, RB, WR, WR, TE, FLEX (W/R/T), K, DEF. Six teams make the playoffs, with points for as the tiebreaker.
 
@@ -28,6 +29,7 @@ The live app is the source of truth. This branch holds a backup of the source, t
   - `node checks/trends.js sim`, then `python3 checks/trends_recheck.py`: recomputes every Mover from raw data, with no app code.
   - `node checks/sermon.js sim 2026`: every week, no missing values, the two-line limit, no back-to-back repeats.
   - `node checks/views.js sim sim`: views at 360, 390, and 768 widths, light and dark, no errors or sideways scrolling.
+  - `node checks/vigil.js sim sim` on fixture data (see Monday Night Vigil).
   - `node checks/plans.js sim`, then `python3 checks/gates.py data.json`: rechecks the sermon gates and Week 8 facts from raw data.
   - Recompute any new math independently before you call it done.
   - The older test scripts (`test4` to `test11`, `pubtest`, `mt-ui`, `g2`) were not recovered. Write a new check when work touches the drop zone, multi-team trades, or Spiritual Gifts.
@@ -66,6 +68,14 @@ The commissioner sends the export JSON (or uses the drop zone), the Reddit trade
 - **Filling In:** risers only. A teammate with 12%+ of that work in earlier games missed 2 of the last 3 team games. For rush share the teammate must be a back. Status reads now with a team, back in a week, Sleeper's status, or "out of the lineup."
 - **With and without (`wWithout`):** a teammate with 15%+ share, 2 games on each side, a rise of at least the bar for the other man, and he sat the latest game or is listed unavailable. Up to 3 lines a team.
 - **QB splits (`wQbSplits`):** Team by team only, not Movers. Starter is the most pass attempts. A game where a second QB throws 10+ is left out. One full game qualifies a QB. Up to 3 QBs by games, always keeping the latest starter, in start order. Top 3 receivers by targets with at least 1 game under two QBs.
+- **Monday Night Vigil (`vigil()`, tab `#vigil`):** Monday only, in the viewer's time zone, and only for an export taken that same day. It closes at midnight. The commissioner can preview it on other days. It uses no Sleeper win odds.
+  - Replays: 10,000 per matchup. Each player still to play draws from his own 2026 games (`projections.act`, weeks he had a usage line; kickers and defenses: weeks his team played). Teammates draw the same week. Fewer than 3 games: pad with this week's projection, flagged "Thin record."
+  - Categories: Literally Impossible, when the trailing team has nobody left. Miracle Territory, when the trailer wins 1% or less of replays. Everything else is live. The game of the night is the live game with the biggest playoff swing from What's at Stake.
+  - Chart: quantile dot plot, 50 dots, trailer minus leader final margin, with the zero line and a "Now" marker.
+  - Keys: need line, rooting guide (skill +1, kicker +0.5, defense pulls against the other offense; kicker plus the defense facing that kicker's team means "field goals, not touchdowns"), kicker duel, shared-drive line.
+  - Lineup confession: a starter with 0 who was on bye or carried an injury tag, and a bench player who already played and scored 5+ that fits the slot directly or through one flex shuffle. One per man per page.
+  - Nav: the tab and a pulsing dot show on Mondays (6-slot bottom bar). The Weekly Recap (renamed from Tuesday Recap) pulses on Tuesdays. A pulse stops once that page is opened that day.
+  - Test data: `python3 checks/vigil_fixture.py data.json sim/data.json`, then `node checks/vigil.js sim sim` (Monday, Tuesday, Wednesday, and stale-Monday clocks; 360, 390, and 768 widths; both themes).
 - **Recap awards:** always 12 tiles, by `recapTiles`. Priority: top and low score, blowout, close, tough, lucky, top player, upset, bad beat, regret, the two Prophecy tiles, Asleep, bench, then fill tiles (Good and Faithful, Armor of God, Best Foot Forward, Still Small Voice, Revival Meeting).
 - **Sermon:** `sermonBook()` plans every week in order, so past weeks never change. Bank lines rotate through every option before repeating.
   - Score: percentile against league history, plus 40 for a league record, 12 for a season high or low, 4 to 10 for a streak, and 14 for a standings change.

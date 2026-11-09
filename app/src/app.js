@@ -1,5 +1,5 @@
 
-const DYK_SEED = 35;
+const DYK_SEED = 36;
 // League model built from the export file. Pure functions, no DOM.
 // Trades reversed within 48 hours: the later trade's adds are the earlier trade's drops, and the other way around
 function reversedTrades(txs) {
@@ -1706,7 +1706,7 @@ function wTeam(W, tm) {
   const signInt = n => (n > 0 ? "+" : n < 0 ? "−" : "") + Math.round(Math.abs(n)).toLocaleString();
   const rec = r => r.w + "-" + r.l + (r.t ? "-" + r.t : "");
   const ordinal = n => n + (["th", "st", "nd", "rd"][(n % 100 - 20) % 10] || ["th", "st", "nd", "rd"][n % 100] || "th");
-  const views = ["home", "standings", "week", "rivals", "members", "history", "draft", "moves", "trades", "chart", "advisor", "gifts", "prophets", "work"];
+  const views = ["home", "vigil", "standings", "week", "rivals", "members", "history", "draft", "moves", "trades", "chart", "advisor", "gifts", "prophets", "work"];
   const moreViews = ["members", "history", "draft", "moves", "rivals", "gifts", "prophets", "work"];
   const deskViews = ["advisor", "chart", "trades"];
   const st = { model: null, year: null, week: null, rival: null, rivalB: null, rivalScope: "all", apScope: null, tradeScope: "all", withPO: false, standView: "final", member: null, goto: null, me: null, wireKind: "pickups", wireScope: "all", wireMode: "share", wireBar: "avg", values: null, tv: null, chartPos: "all", prView: "acts", gWeek: null, gView: "position", gTeam: null, gCache: {}, ppCache: {}, stakeCache: {}, dCache: {}, scaleCache: {}, prayAll: false, multi: null, mtPick: "", mtTo: "", mtSel: null, mtPair: true, mtLock: new Set(), mtRes: null, chartOpen: null, trade: { a: null, b: null, aGets: [], bGets: [] }, ideasFor: null, ideaCache: {} };
@@ -2193,7 +2193,7 @@ function wTeam(W, tm) {
     const w = s.weeks[s.weeks.length - 1];
     if (!w) return `<p class="empty">No scored weeks yet.</p>`;
     const preach = sermon(s, w, true), lines = preach.lines.slice(0, SERMON_HOME);
-    let h = meBlock(s);
+    let h = vigilTile() + meBlock(s);
     h += `<section class="hero share"><div class="share-top"><span class="share-brand">Gambling Baptist</span><span class="share-wk">${esc(s.year)} · Week ${w}</span></div><p class="hero-k">${preach.kicker}</p><h2 class="hero-h st">${preach.title}</h2><ol class="sermon">${lines.map(l => `<li>${l}</li>`).join("")}</ol>${preach.benediction ? `<p class="sermon-ben"><span class="sl">Benediction</span>${preach.benediction}</p>` : ""}<p class="share-hint">Screenshot this card and post it in GroupMe.</p>${goBtn("week", "Tuesday Recap")}Read the full recap</button></section>`;
     const rec0 = recordOfWeek();
     if (rec0) h += `<div class="didyou"><span class="dk">Did you know</span><span class="dt">${rec0}</span></div>`;
@@ -2543,12 +2543,12 @@ function wTeam(W, tm) {
     return h;
   }
 
-  /* ---------- Tuesday Recap ---------- */
+  /* ---------- Weekly Recap ---------- */
   function week() {
     const s = season();
     if (!s.weeks.length) return `<p class="empty">No scored weeks yet for ${esc(s.year)}.</p>`;
     if (!s.weeks.includes(st.week)) st.week = s.weeks[s.weeks.length - 1];
-    let h = sec("Tuesday Recap", `${esc(s.year)}, week ${st.week}${st.week >= s.pws ? ", playoffs" : ""}`) + `<div class="chips" role="group" aria-label="Choose a week">`;
+    let h = sec("Weekly Recap", `${esc(s.year)}, week ${st.week}${st.week >= s.pws ? ", playoffs" : ""}`) + `<div class="chips" role="group" aria-label="Choose a week">`;
     s.weeks.forEach(w => { h += `<button data-week="${w}" aria-pressed="${w === st.week}" class="${w >= s.pws ? "po" : ""}">${w}</button>`; });
     h += `</div>`;
     if (s.pws <= s.weeks[s.weeks.length - 1]) h += `<p class="fine">Dashed weeks are playoff weeks.</p>`;
@@ -3734,10 +3734,261 @@ function wTeam(W, tm) {
     return `<details class="explain"><summary>How trade ideas are picked</summary><p>For every pair of teams we try one-for-one, two-for-one, and two-for-two swaps among each team's top eight healthy players worth 8 or more, this week's pickups included. Injured players, kickers, and defenses are left out.</p><p>A trade makes the list only if the adjusted values land within 10% of each other and both teams' best weekly lineup goes up by at least half a point. The best ones help both sides about equally. Each member gets up to three, with different partners and no player used twice. Fair on the charts cannot account for someone who loves his own players.</p></details>`;
   }
 
+  /* ---------- Monday Night Vigil: Monday only, decided by outcomes, never by Sleeper's win odds ----------
+     The commissioner exports after Sunday's games. live.rows hold each lineup's points so far, live.teams says which
+     NFL teams have not played. Each player still to play is replayed from his own 2026 games in this league's scoring.
+     Teammates draw the same week, so a big Bills night lifts every Bills player together. */
+  const NFL = { ARI: "Cardinals", ATL: "Falcons", BAL: "Ravens", BUF: "Bills", CAR: "Panthers", CHI: "Bears", CIN: "Bengals", CLE: "Browns", DAL: "Cowboys", DEN: "Broncos", DET: "Lions", GB: "Packers", HOU: "Texans", IND: "Colts", JAX: "Jaguars", KC: "Chiefs", LV: "Raiders", LAC: "Chargers", LAR: "Rams", LA: "Rams", MIA: "Dolphins", MIN: "Vikings", NE: "Patriots", NO: "Saints", NYG: "Giants", NYJ: "Jets", PHI: "Eagles", PIT: "Steelers", SF: "49ers", SEA: "Seahawks", TB: "Buccaneers", TEN: "Titans", WAS: "Commanders" };
+  const nfl = t => NFL[t] || t;
+  const VG_N = 10000, VG_DOTS = 50, VG_MIRACLE = 0.01;
+  const dayKey = d => { const x = new Date(d); return x.getFullYear() + "-" + (x.getMonth() + 1) + "-" + x.getDate(); };
+  // Open on the viewer's Monday, and only for an export taken that same day. The commissioner can preview any day.
+  function vigilState() {
+    const L = st.raw && st.raw.live;
+    if (!L || !Array.isArray(L.rows) || !L.teams || L.statsOk === false || !st.model) return { L: null, open: false, preview: false };
+    const now = new Date(), open = now.getDay() === 1 && dayKey(L.at) === dayKey(now);
+    return { L, open, preview: !open && st.canEdit };
+  }
+  const vigilShown = () => { const v = vigilState(); return !!(v.L && (v.open || v.preview)); };
+  function vigilData() {
+    if (st.vigilCache) return st.vigilCache;
+    const L = st.raw.live, M = st.model, s = M.latest, P = M.players || {}, proj = M.projections || {};
+    const posOf = pid => { const p = String((P[pid] || [])[1] || "").toUpperCase(); return p === "FB" ? "RB" : p; };
+    const teamOf = pid => (L.pteam && L.pteam[pid]) || (posOf(pid) === "DEF" ? pid : (P[pid] || [])[2] || "");
+    const nameOf = pid => posOf(pid) === "DEF" ? nfl(pid) + " defense" : (P[pid] || [pid])[0];
+    const leftT = new Set(Object.keys(L.teams).filter(t => L.teams[t].left));
+    const U = (proj.usage && proj.usage.weeks) || {}, A = proj.act || {}, wk = Object.keys(A).map(Number).sort((a, b) => a - b);
+    const teamWeeks = {};
+    Object.entries(U).forEach(([w, rows]) => Object.values(rows).forEach(r => { if (r && r[0]) (teamWeeks[r[0]] = teamWeeks[r[0]] || new Set()).add(+w); }));
+    // A player's 2026 games: weeks he took the field (kickers and defenses: weeks his team played)
+    const logs = {};
+    const logOf = pid => {
+      if (logs[pid]) return logs[pid];
+      const pos = posOf(pid), out = [];
+      wk.forEach(w => {
+        const a = A[w] || {}, u = (U[w] || {})[pid];
+        if (pos === "K" || pos === "DEF") { const t = teamOf(pid); if (pid in a && teamWeeks[t] && teamWeeks[t].has(w)) out.push({ w, v: a[pid] }); }
+        else if (u && u[1] > 0) out.push({ w, v: a[pid] || 0 });
+      });
+      const thin = out.length < 3, pj = proj.pts && proj.pts[pid];
+      const pool = out.slice(); if (thin && pj != null) while (pool.length < 3) pool.push({ w: null, v: pj });
+      return (logs[pid] = { games: out, pool, thin });
+    };
+    const sideOf = r => {
+      const uid = s.rosterOwner[r.roster_id];
+      const starters = (r.starters || []).map((pid, i) => ({ pid, i, pts: +((r.starters_points || [])[i] || 0), team: teamOf(pid), pos: posOf(pid) }));
+      const left = starters.filter(x => x.pid && x.pid !== "0" && leftT.has(x.team));
+      return { uid, r, starters, left, pts: Math.round(starters.reduce((a, x) => a + x.pts, 0) * 100) / 100 };
+    };
+    let seed = 20261109;
+    const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+    // Final margins, trailer minus leader, over VG_N replays of Monday
+    const replay = (lead, trail) => {
+      const all = trail.left.concat(lead.left), teams = [...new Set(all.map(x => x.team))], out = new Float64Array(VG_N);
+      all.forEach(x => logOf(x.pid));
+      for (let i = 0; i < VG_N; i++) {
+        const pick = {}; teams.forEach(t => { const ws = teamWeeks[t] ? [...teamWeeks[t]] : []; pick[t] = ws.length ? ws[Math.floor(rnd() * ws.length)] : null; });
+        const draw = x => { const g = logs[x.pid]; if (!g.pool.length) return 0; const hit = g.pool.find(e => e.w === pick[x.team]); return hit ? hit.v : g.pool[Math.floor(rnd() * g.pool.length)].v; };
+        let m = trail.pts - lead.pts;
+        trail.left.forEach(x => { m += draw(x); }); lead.left.forEach(x => { m -= draw(x); });
+        out[i] = m;
+      }
+      return out.sort();
+    };
+    const share = (arr, shift) => { let n = 0; for (let i = 0; i < arr.length; i++) if (arr[i] + (shift || 0) > 0) n++; return n / arr.length; };
+    const byMid = {}; L.rows.forEach(r => { if (r.matchup_id != null) (byMid[r.matchup_id] = byMid[r.matchup_id] || []).push(r); });
+    const sd = stakesData(s), sdOk = sd && sd.week === L.week;
+    const games = Object.values(byMid).filter(p => p.length === 2).map(([ra, rb]) => {
+      const a = sideOf(ra), b = sideOf(rb);
+      const lead = a.pts >= b.pts ? a : b, trail = lead === a ? b : a, gap = Math.round((lead.pts - trail.pts) * 100) / 100;
+      const g = { lead, trail, gap, margins: null, win: 0 };
+      if (!trail.left.length) g.cat = "impossible";
+      else { g.margins = replay(lead, trail); g.win = share(g.margins); g.cat = g.win <= VG_MIRACLE ? "miracle" : "live"; }
+      if (sdOk) { const c = u => sd.pp.stakes.cond[u]; const sw = u => (c(u) && c(u).winPo != null && c(u).lossPo != null ? c(u).winPo - c(u).lossPo : 0); g.swing = sw(lead.uid) + sw(trail.uid); }
+      else g.swing = 0;
+      g.roast = [lead, trail].map(sd0 => blunder(sd0, g)).filter(Boolean);
+      return g;
+    });
+    // Lineup confessions: a starter who scored nothing because he sat or was on bye, with a bench player who scored 5+
+    function blunder(side, g) {
+      let worst = null;
+      side.starters.forEach(x => {
+        if (!x.pid || x.pid === "0" || x.pts !== 0 || leftT.has(x.team)) return;
+        const bye = !L.teams[x.team], inj = M.injuries[x.pid] && M.injuries[x.pid].s;
+        // Fits the slot directly, or through one shuffle: the flex starter slides into this slot and the bench player takes the flex
+        const elig = new Set(s.slotElig[x.i] || [x.pos]);
+        side.starters.forEach(y => { const e = s.slotElig[y.i]; if (y !== x && e && e.size > 1 && elig.has(y.pos)) e.forEach(q => elig.add(q)); });
+        const startSet = new Set(side.r.starters || []);
+        const bench = (side.r.players || []).filter(p => !startSet.has(p) && elig.has(posOf(p)) && !leftT.has(teamOf(p))).map(p => ({ pid: p, pts: +((side.r.players_points || {})[p] || 0) })).sort((p, q) => q.pts - p.pts)[0];
+        if (!bench || bench.pts < 5) return;
+        if (!bye && !inj) return;
+        if (!worst || bench.pts > worst.bench.pts) worst = { x, bench, why: bye ? "on bye" : "listed " + inj };
+      });
+      if (!worst) return null;
+      worst.uid = side.uid;
+      // What the empty slot did to this game
+      if (g.margins) {
+        const shifted = share(g.margins, side === g.lead ? -worst.bench.pts : worst.bench.pts);
+        worst.then = shifted; worst.isLead = side === g.lead;
+      } else worst.flip = side === g.trail && worst.bench.pts > g.gap;
+      return worst;
+    }
+    games.sort((p, q) => ({ live: 0, miracle: 1, impossible: 2 })[p.cat] - ({ live: 0, miracle: 1, impossible: 2 })[q.cat] || q.swing - p.swing || p.gap - q.gap);
+    const liveG = games.filter(g => g.cat === "live");
+    const feature = liveG.slice().sort((p, q) => q.swing - p.swing || Math.abs(0.5 - p.win) - Math.abs(0.5 - q.win))[0] || null;
+    // The Monday games: pairs of teams still to play
+    const nflGames = []; const seen = new Set();
+    [...leftT].sort().forEach(t => { if (seen.has(t)) return; const o = L.teams[t].opp; seen.add(t); if (o) seen.add(o); nflGames.push([t, o && leftT.has(o) ? o : null]); });
+    // One confession a man for the whole page
+    const roasted = new Set();
+    games.forEach(g => { g.roast = g.roast.filter(b => !roasted.has(b.uid) && roasted.add(b.uid)); });
+    return (st.vigilCache = { L, s, games, feature, nflGames, nameOf, logOf, posOf, sd: sdOk ? sd : null, leftT });
+  }
+
+  // Quantile dot plot: 50 dots, each one Monday in fifty. Leader on the left, the trailer's comeback to the right of the line.
+  function vgDots(g) {
+    const m = g.margins, n = VG_DOTS, q = [];
+    for (let i = 0; i < n; i++) q.push(m[Math.min(m.length - 1, Math.floor(((i + 0.5) / n) * m.length))]);
+    const lo = Math.min(q[0], -g.gap, 0), hi = Math.max(q[n - 1], 0);
+    const pad = Math.max(4, (hi - lo) * 0.06), x0 = lo - pad, x1 = hi + pad;
+    const W = 340, L0 = 10, R0 = 10, r = 4.2, d = r * 2 + 0.6;
+    const X = v => L0 + ((v - x0) / (x1 - x0)) * (W - L0 - R0);
+    // Wilkinson stacking: walk left to right, a new column whenever a dot clears the last column
+    const cols = []; q.forEach(v => { const px = X(v); const c = cols[cols.length - 1]; if (c && px - c.x < d) c.v.push(v); else cols.push({ x: px, v: [v] }); });
+    cols.forEach(c => { c.cx = X(c.v.reduce((a, b) => a + b, 0) / c.v.length); });
+    for (let i = 1; i < cols.length; i++) if (cols[i].cx - cols[i - 1].cx < d) cols[i].cx = cols[i - 1].cx + d;
+    const tall = Math.max(...cols.map(c => c.v.length)), base = 26 + tall * d, H = base + 40;
+    const wins = q.filter(v => v > 0).length;
+    let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`Fifty replays of Monday. ${ownerName(g.trail.uid)} wins ${wins} of 50.`)}">`;
+    const zx = X(0), nx = X(-g.gap);
+    svg += `<rect class="vg-zone" x="${zx}" y="16" width="${W - R0 - zx}" height="${base - 16}" rx="4"/>`;
+    svg += `<line class="grid" x1="${L0}" x2="${W - R0}" y1="${base + 2}" y2="${base + 2}"/>`;
+    svg += `<line class="vg-zero" x1="${zx}" x2="${zx}" y1="16" y2="${base + 8}"/>`;
+    svg += `<text class="axis" x="${W - R0}" y="10" text-anchor="end">${esc(ownerName(g.trail.uid))} wins →</text>`;
+    svg += `<text class="axis" x="${L0}" y="10">← ${esc(ownerName(g.lead.uid))} holds</text>`;
+    cols.forEach(c => c.v.forEach((v, k) => { svg += `<circle class="vg-dot${v > 0 ? " up" : ""}" cx="${c.cx.toFixed(1)}" cy="${(base - r - k * d).toFixed(1)}" r="${r}"/>`; }));
+    svg += `<path class="vg-now" d="M${nx} ${base + 8} l-5 9 h10 z"/><text class="tick" x="${nx}" y="${base + 30}" text-anchor="middle">Now: down ${f1(g.gap)}</text>`;
+    if (Math.abs(zx - nx) >= 60) svg += `<text class="tick" x="${zx}" y="${base + 30}" text-anchor="middle">Tie</text>`;
+    return `<figure class="chart vg-fig">${svg}</svg><figcaption class="vg-cap"><span><b>${wins}</b> of 50 Mondays end in a comeback.</span><span class="muted">Each dot is one replay. Dots right of the line are wins for ${esc(ownerName(g.trail.uid))}.</span></figcaption></figure>`;
+  }
+  const vgPlayers = (V, list) => list.map(x => `${pn(x.pid, V.nameOf(x.pid))}${x.pos === "DEF" ? "" : ` <span class="muted">${esc(x.pos)}</span>`}`).join(", ");
+  const vgList = (V, list) => { const n = list.map(x => pn(x.pid, V.nameOf(x.pid))); return n.length < 2 ? n.join("") : n.slice(0, -1).join(", ") + (n.length > 2 ? "," : "") + " and " + n[n.length - 1]; };
+  // Per player: what his 2026 games say about this target
+  function vgNeedLine(V, g) {
+    const T = ownerName(g.trail.uid), Lh = ownerName(g.lead.uid), need = g.gap + 0.01;
+    if (!g.lead.left.length && g.trail.left.length === 1) {
+      const x = g.trail.left[0], lg = V.logOf(x.pid), hit = lg.games.filter(e => e.v >= need).length;
+      return `${esc(T)} needs <b>${f1(need)}</b> from ${pn(x.pid, V.nameOf(x.pid))}. ${lg.games.length ? `He has done that in <b>${hit} of ${lg.games.length}</b> games this year.` : "He has no games in our scoring this year."}`;
+    }
+    const med = g.margins ? g.margins[Math.floor(g.margins.length / 2)] + g.gap : null, typ = med == null ? "" : ` On a middle-of-the-road night they net ${f1(med)}.`;
+    if (!g.lead.left.length) return `${esc(T)} needs <b>${f1(need)}</b> combined from ${vgList(V, g.trail.left)}. ${esc(Lh)} has nobody left to answer.${typ}`;
+    return `${esc(T)}'s ${vgList(V, g.trail.left)} must outscore ${esc(Lh)}'s ${vgList(V, g.lead.left)} by <b>${f1(need)}</b>.${typ}`;
+  }
+  // Who each man is pulling for, from his players' teams. Kickers pull half as hard. A defense pulls against the other offense.
+  function vgRoot(V, side, other) {
+    const nm = ownerName(side.uid);
+    if (!side.left.length) return `<b>${esc(nm)}</b> has nobody left. All he can do is watch and pray.`;
+    const pull = {}, k = side.left.filter(x => x.pos === "K"), dst = side.left.filter(x => x.pos === "DEF");
+    side.left.forEach(x => {
+      if (x.pos === "DEF") { const o = V.L.teams[x.team] && V.L.teams[x.team].opp; if (o) pull[o] = (pull[o] || 0) - 1; }
+      else pull[x.team] = (pull[x.team] || 0) + (x.pos === "K" ? 0.5 : 1);
+    });
+    const parts = [];
+    const fgTeam = k.map(x => x.team).find(t => dst.some(d => V.L.teams[d.team] && V.L.teams[d.team].opp === t));
+    Object.entries(pull).sort((p, q) => Math.abs(q[1]) - Math.abs(p[1])).forEach(([t, v]) => {
+      if (t === fgTeam) parts.push(`the ${esc(nfl(t))} to stall in the red zone: field goals, not touchdowns`);
+      else if (v > 0) parts.push(`the ${esc(nfl(t))} to score early and often`);
+      else if (v < 0) parts.push(`the ${esc(nfl(t))} held down`);
+    });
+    Object.keys(pull).filter(t => pull[t] === 0).forEach(t => parts.push(`the ${esc(nfl(t))} to do just enough, since he has players on both sides of that ball`));
+    const cross = side.left.filter(x => x.pos !== "DEF" && x.pos !== "K" && dst.some(d => V.L.teams[d.team] && V.L.teams[d.team].opp === x.team));
+    let h = `<b>${esc(nm)}</b> wants ${parts.length ? parts.join(", and ") : "a quiet night"}.`;
+    if (cross.length) h += ` His ${vgList(V, cross)} and his ${esc(nfl(dst[0].team))} defense pull against each other.`;
+    return h;
+  }
+  function vgDuel(V, g) {
+    const out = [];
+    const ka = g.lead.left.filter(x => x.pos === "K"), kb = g.trail.left.filter(x => x.pos === "K");
+    if (ka.length && kb.length) out.push(`Kicker duel: ${pn(kb[0].pid, V.nameOf(kb[0].pid))} against ${pn(ka[0].pid, V.nameOf(ka[0].pid))}.`);
+    const teamsA = new Set(g.lead.left.filter(x => x.pos !== "DEF").map(x => x.team)), shared = g.trail.left.filter(x => x.pos === "DEF").map(x => V.L.teams[x.team] && V.L.teams[x.team].opp).filter(t => t && teamsA.has(t));
+    const sharedB = new Set(g.trail.left.filter(x => x.pos !== "DEF").map(x => x.team)), sharedA = g.lead.left.filter(x => x.pos === "DEF").map(x => V.L.teams[x.team] && V.L.teams[x.team].opp).filter(t => t && sharedB.has(t));
+    [...new Set(shared.concat(sharedA))].forEach(t => out.push(`Every ${esc(nfl(t))} drive swings this one. One man's offense is the other man's defense.`));
+    return out;
+  }
+  function vgConfess(V, b, g) {
+    const nm = ownerName(b.uid), xp = pn(b.x.pid, V.nameOf(b.x.pid)), bp = pn(b.bench.pid, V.nameOf(b.bench.pid));
+    let h = `<b>${esc(nm)}</b> started ${xp}, ${esc(b.why)}, and left ${bp}'s ${f1(b.bench.pts)} on the bench.`;
+    if (b.then != null && b.isLead) h += b.then <= VG_MIRACLE ? ` With that lineup, this game would already sit in Miracle Territory.` : ` Start him and ${esc(ownerName(g.trail.uid))} needs ${f1(g.gap + b.bench.pts)}, not ${f1(g.gap)}. Comebacks drop from ${Math.round(g.win * 50)} of 50 Mondays to ${Math.round(b.then * 50)}.`;
+    else if (b.then != null) h += b.then > 0.5 ? ` With that lineup he would be the favorite tonight.` : ` Start him and the gap is ${f1(Math.max(0, g.gap - b.bench.pts))}, not ${f1(g.gap)}.`;
+    else if (b.flip) h += ` That alone would have won it.`;
+    return `<p class="vg-confess"><span class="tag t-down">Lineup confession</span> ${h}</p>`;
+  }
+  function vgStakes(V, g) {
+    if (!V.sd) return "";
+    const one = u => `<div class="vg-stake"><b>${esc(ownerName(u))}</b> ${stakeHTML(u, V.sd.pp.stakes.cond[u], V.sd.pp)}</div>`;
+    return `<div class="vg-stakes">${one(g.trail.uid)}${one(g.lead.uid)}</div>`;
+  }
+  function vgCard(V, g, big) {
+    const T = g.trail, Lg = g.lead;
+    const side = (sd0, lab) => `<div class="vg-side"><div class="vg-who">${whoInline(sd0.uid, V.s)}</div><div class="vg-pts num">${f1(sd0.pts)}</div><div class="vg-left">${sd0.left.length ? `${lab}: ${vgPlayers(V, sd0.left)}` : "Nobody left to play"}</div></div>`;
+    let h = `<article class="vg-card${big ? " big" : ""}">`;
+    if (big) h += `<p class="vg-kick">Game of the night · biggest playoff swing</p>`;
+    h += `<div class="vg-head">${side(T, "Still to play")}<div class="vg-gap"><span>down</span><b class="num">${f1(g.gap)}</b></div>${side(Lg, "Still to play")}</div>`;
+    h += vgDots(g);
+    h += `<h3>Keys to victory</h3><p class="vg-need">${vgNeedLine(V, g)}</p><ul class="vg-keys"><li>${vgRoot(V, T, Lg)}</li><li>${vgRoot(V, Lg, T)}</li>${vgDuel(V, g).map(x => `<li>${x}</li>`).join("")}</ul>`;
+    const thin = T.left.concat(Lg.left).filter(x => V.logOf(x.pid).thin);
+    if (thin.length) h += `<p class="fine">Thin record: ${vgList(V, thin)} ${thin.length === 1 ? "has" : "have"} fewer than 3 games this year, so Sleeper's projection fills the gap.</p>`;
+    h += vgStakes(V, g);
+    g.roast.forEach(b => { h += vgConfess(V, b, g); });
+    return h + `</article>`;
+  }
+  function vigil() {
+    const vs = vigilState();
+    if (!vs.L) return sec("Monday Night Vigil", "Nothing to watch yet. The vigil opens on Monday once the commissioner loads the Sunday results.");
+    if (!vs.open && !vs.preview) return sec("Monday Night Vigil", "The vigil opens on Mondays, after the Sunday games, and closes at midnight. Come back next Monday.");
+    const V = vigilData();
+    const when = new Date(V.L.at).toLocaleString(undefined, { weekday: "long", hour: "numeric", minute: "2-digit" });
+    const games = V.nflGames.map(([a, b]) => b ? `${nfl(a)} vs. ${nfl(b)}` : nfl(a)).join(" and ");
+    let h = "";
+    if (vs.preview) h += `<p class="warn">Commissioner preview. Members see this page on Mondays only, from an export taken that day.</p>`;
+    h += sec("Monday Night Vigil", `Week ${V.L.week}, before ${games ? esc(games) : "the Monday game"}. "Watch and pray." Matthew 26:41. Snapshot from ${esc(when)}; it does not update during the game.`);
+    const live = V.games.filter(g => g.cat === "live"), mir = V.games.filter(g => g.cat === "miracle"), imp = V.games.filter(g => g.cat === "impossible");
+    if (V.feature) h += vgCard(V, V.feature, true);
+    const rest = live.filter(g => g !== V.feature);
+    if (rest.length) { h += `<h2>Still in the balance</h2>`; rest.forEach(g => { h += vgCard(V, g, false); }); }
+    if (!live.length) h += `<p class="empty">No game is still in the balance. Every matchup is settled or close to it.</p>`;
+    const row = g => {
+      const T = ownerName(g.trail.uid), Lh = ownerName(g.lead.uid);
+      let line;
+      if (g.cat === "miracle") line = `${esc(T)} trails ${esc(Lh)} by ${f1(g.gap)}. ${vgNeedLine(V, g)} ${g.win > 0 ? `It happens in ${Math.round(g.win * VG_N).toLocaleString()} of ${VG_N.toLocaleString()} replays.` : `It has not happened once in ${VG_N.toLocaleString()} replays. Not impossible, just never.`}`;
+      else line = g.trail.left.length || g.lead.left.length ? `${esc(Lh)} leads ${esc(T)} ${f1(g.lead.pts)} to ${f1(g.trail.pts)}. ${esc(T)} has nobody left${g.lead.left.length ? `. ${vgPlayers(V, g.lead.left)} still play${g.lead.left.length === 1 ? "s" : ""}, for style points` : ""}.` : `Final: ${esc(Lh)} ${f1(g.lead.pts)}, ${esc(T)} ${f1(g.trail.pts)}.`;
+      return `<div class="vg-row"><div class="vg-row-h">${whoInline(g.lead.uid, V.s)} <span class="muted">over</span> ${whoInline(g.trail.uid, V.s)}</div><p>${line}</p>${g.roast.map(b => vgConfess(V, b, g)).join("")}</div>`;
+    };
+    if (mir.length) { h += sec("Miracle Territory", `"With God all things are possible." Matthew 19:26. The trailing team wins in 1% or fewer of our replays.`); h += mir.map(row).join(""); }
+    if (imp.length) { h += sec("Literally Impossible", `"With man this is impossible." Matthew 19:26. The trailing team has nobody left to play.`); h += imp.map(row).join(""); }
+    h += `<details class="explain"><summary>How the replays work</summary><p>No Sleeper win odds anywhere. For each player still to play, we take his own 2026 games, scored with our league's settings, and replay Monday ${VG_N.toLocaleString()} times. Teammates draw the same week together, so a big Bills night lifts every Bills player at once. Opposing teams draw separately.</p><p>A player with fewer than 3 games this year gets Sleeper's projection for this week to fill the gap. Kickers and defenses count every week their team played.</p><p>Miracle Territory: the trailing team wins in 1% or fewer of replays. Literally Impossible: the trailing team has nobody left. Playoff odds come from What's at Stake. Lineup confessions flag a starter who sat or was on bye while a bench player at that spot scored 5 or more.</p></details>`;
+    return h;
+  }
+  // Home: on Monday, point at the vigil first
+  function vigilTile() {
+    if (!vigilShown()) return "";
+    const V = vigilData(), live = V.games.filter(g => g.cat === "live").length, f = V.feature;
+    return `<section class="hero slim vg-tile"><p class="hero-k">Monday Night Vigil · Week ${V.L.week}</p><p class="vg-tile-t">${live ? `${live} ${live === 1 ? "game is" : "games are"} still in the balance.` : "Every game is settled or close to it."}${f ? ` Game of the night: ${esc(ownerName(f.trail.uid))} chasing ${esc(ownerName(f.lead.uid))}, down ${f1(f.gap)}.` : ""}</p><button type="button" class="go" data-go="vigil" data-sec="">Keep watch</button></section>`;
+  }
+
   /* ---------- Shell ---------- */
   function setSheet(open) {
     $("sheet").hidden = !open; $("scrim").hidden = !open;
     $("moreBtn").setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  // Monday: the vigil tab appears and pulses. Tuesday: the Recap pulses. A pulse stops once that day's page is opened.
+  function navMarks(v) {
+    const today = dayKey(new Date()), dow = new Date().getDay(), vs = vigilState(), showV = !!(vs.L && (vs.open || vs.preview));
+    if (v === "vigil" || v === "week") store.set("gb-seen-" + v, today);
+    const pulse = { vigil: showV && store.get("gb-seen-vigil") !== today, week: dow === 2 && store.get("gb-seen-week") !== today };
+    document.querySelectorAll('a[href="#vigil"]').forEach(a => { a.hidden = !showV; });
+    document.querySelector("nav.bottom").classList.toggle("six", showV);
+    document.querySelectorAll('a[href="#vigil"], a[href="#week"]').forEach(a => { const k = a.getAttribute("href").slice(1); a.classList.toggle("ping", !!pulse[k]); });
   }
   let lastView = null;
   function render() {
@@ -3745,9 +3996,10 @@ function wTeam(W, tm) {
     document.querySelectorAll("nav.tabs a, nav.bottom a, .sheet a").forEach(a => { const hv = a.getAttribute("href").slice(1); if (hv === v || (a.dataset.desk && deskViews.includes(v))) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
     if (moreViews.includes(v)) $("moreBtn").setAttribute("aria-current", "page"); else $("moreBtn").removeAttribute("aria-current");
     setSheet(false);
-    $("seasonWrap").hidden = v === "home" || v === "chart" || v === "advisor";
+    $("seasonWrap").hidden = v === "home" || v === "vigil" || v === "chart" || v === "advisor";
+    navMarks(v);
     const y = window.scrollY;
-    const fn = { home, standings, week, rivals, members, history, draft, moves, trades, chart, advisor, gifts, prophets, work }[v];
+    const fn = { home, vigil, standings, week, rivals, members, history, draft, moves, trades, chart, advisor, gifts, prophets, work }[v];
     const view = $("view");
     try { view.innerHTML = fn(); }
     catch (e) { view.innerHTML = `<p class="empty">This page did not load: ${esc(e.message)}. Pick another season or refresh.</p>`; return; }
@@ -3952,7 +4204,7 @@ function wTeam(W, tm) {
 
   function start(raw) {
     st.raw = raw;
-    Object.assign(st, { gCache: {}, ppCache: {}, stakeCache: {}, dCache: {}, scaleCache: {}, ideaCache: {}, mtRes: null, multi: null });
+    Object.assign(st, { vigilCache: null, gCache: {}, ppCache: {}, stakeCache: {}, dCache: {}, scaleCache: {}, ideaCache: {}, mtRes: null, multi: null });
     st.model = buildLeague(raw); st.pIdx = undefined; st.prCache = null; st.wk = undefined;
     Object.values(st.model.owners).forEach(o => { if (NICK[o.name]) { o.handle = o.name; o.name = NICK[o.name]; } });
     st.model.seasons.forEach(x => Object.keys(x.teamName).forEach(uid => { const o = st.model.owners[uid]; if (o && o.handle && x.teamName[uid] === o.handle) x.teamName[uid] = "Team " + o.name; }));
