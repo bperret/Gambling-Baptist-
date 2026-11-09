@@ -1,5 +1,5 @@
 
-const DYK_SEED = 37;
+const DYK_SEED = 38;
 // League model built from the export file. Pure functions, no DOM.
 // Trades reversed within 48 hours: the later trade's adds are the earlier trade's drops, and the other way around
 function reversedTrades(txs) {
@@ -3882,11 +3882,13 @@ function wTeam(W, tm) {
     return (st.vigilCache = { L, s, games, feature, nflGames, nameOf, logOf, posOf, sd: sdOk ? sd : null, leftT });
   }
 
-  // Quantile dot plot: 50 dots, each one Monday in fifty. Leader on the left, the trailer's comeback to the right of the line.
+  // Quantile dot plot: 50 dots, each one Monday in fifty. Same sides as the card above: the trailer on the left, the leader on the right.
+  // x is the leader's final edge, so dots left of the line are comebacks.
   function vgDots(g) {
     const m = g.margins, n = VG_DOTS, q = [];
-    for (let i = 0; i < n; i++) q.push(m[Math.min(m.length - 1, Math.floor(((i + 0.5) / n) * m.length))]);
-    const lo = Math.min(q[0], -g.gap, 0), hi = Math.max(q[n - 1], 0);
+    for (let i = 0; i < n; i++) q.push(-m[Math.min(m.length - 1, Math.floor(((i + 0.5) / n) * m.length))]);
+    q.sort((x, y) => x - y);
+    const lo = Math.min(q[0], 0), hi = Math.max(q[n - 1], g.gap, 0);
     const pad = Math.max(4, (hi - lo) * 0.06), x0 = lo - pad, x1 = hi + pad;
     const W = 340, L0 = 10, R0 = 10, r = 4.2, d = r * 2 + 0.6;
     const X = v => L0 + ((v - x0) / (x1 - x0)) * (W - L0 - R0);
@@ -3895,18 +3897,18 @@ function wTeam(W, tm) {
     cols.forEach(c => { c.cx = X(c.v.reduce((a, b) => a + b, 0) / c.v.length); });
     for (let i = 1; i < cols.length; i++) if (cols[i].cx - cols[i - 1].cx < d) cols[i].cx = cols[i - 1].cx + d;
     const tall = Math.max(...cols.map(c => c.v.length)), base = 26 + tall * d, H = base + 40;
-    const wins = q.filter(v => v > 0).length;
-    let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`Fifty replays of Monday. ${ownerName(g.trail.uid)} wins ${wins} of 50.`)}">`;
-    const zx = X(0), nx = X(-g.gap);
-    svg += `<rect class="vg-zone" x="${zx}" y="16" width="${W - R0 - zx}" height="${base - 16}" rx="4"/>`;
+    const wins = q.filter(v => v < 0).length, T = ownerName(g.trail.uid), Lh = ownerName(g.lead.uid);
+    let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`Fifty replays of Monday. ${T} wins ${wins} of 50.`)}">`;
+    const zx = X(0), nx = X(g.gap);
+    svg += `<rect class="vg-zone" x="${L0}" y="16" width="${Math.max(0, zx - L0)}" height="${base - 16}" rx="4"/>`;
     svg += `<line class="grid" x1="${L0}" x2="${W - R0}" y1="${base + 2}" y2="${base + 2}"/>`;
     svg += `<line class="vg-zero" x1="${zx}" x2="${zx}" y1="16" y2="${base + 8}"/>`;
-    svg += `<text class="axis" x="${W - R0}" y="10" text-anchor="end">${esc(ownerName(g.trail.uid))} wins →</text>`;
-    svg += `<text class="axis" x="${L0}" y="10">← ${esc(ownerName(g.lead.uid))} holds</text>`;
-    cols.forEach(c => c.v.forEach((v, k) => { svg += `<circle class="vg-dot${v > 0 ? " up" : ""}" cx="${c.cx.toFixed(1)}" cy="${(base - r - k * d).toFixed(1)}" r="${r}"/>`; }));
+    svg += `<text class="axis" x="${L0}" y="10">← ${esc(T)} wins</text>`;
+    svg += `<text class="axis" x="${W - R0}" y="10" text-anchor="end">${esc(Lh)} holds →</text>`;
+    cols.forEach(c => c.v.forEach((v, k) => { svg += `<circle class="vg-dot${v < 0 ? " up" : ""}" cx="${c.cx.toFixed(1)}" cy="${(base - r - k * d).toFixed(1)}" r="${r}"/>`; }));
     svg += `<path class="vg-now" d="M${nx} ${base + 8} l-5 9 h10 z"/><text class="tick" x="${nx}" y="${base + 30}" text-anchor="middle">Now: down ${f1(g.gap)}</text>`;
     if (Math.abs(zx - nx) >= 60) svg += `<text class="tick" x="${zx}" y="${base + 30}" text-anchor="middle">Tie</text>`;
-    return `<figure class="chart vg-fig">${svg}</svg><figcaption class="vg-cap"><span><b>${wins}</b> of 50 Mondays end in a comeback.</span><span class="muted">Each dot is one replay. Dots right of the line are wins for ${esc(ownerName(g.trail.uid))}.</span></figcaption></figure>`;
+    return `<figure class="chart vg-fig">${svg}</svg><figcaption class="vg-cap"><span><b>${wins}</b> of 50 Mondays end in a comeback.</span><span class="muted">Each dot is one replay. Dots left of the line are wins for ${esc(T)}.</span></figcaption></figure>`;
   }
   const vgPlayers = (V, list) => list.map(x => `${pn(x.pid, V.nameOf(x.pid))}${x.pos === "DEF" ? "" : ` <span class="muted">${esc(x.pos)}</span>`}`).join(", ");
   const vgList = (V, list) => { const n = list.map(x => pn(x.pid, V.nameOf(x.pid))); return n.length < 2 ? n.join("") : n.slice(0, -1).join(", ") + (n.length > 2 ? "," : "") + " and " + n[n.length - 1]; };
@@ -4022,11 +4024,10 @@ function wTeam(W, tm) {
     $("sheet").hidden = !open; $("scrim").hidden = !open;
     $("moreBtn").setAttribute("aria-expanded", open ? "true" : "false");
   }
-  // Monday: the vigil tab appears and pulses. Tuesday: the Recap pulses. A pulse stops once that day's page is opened.
+  // Monday: the vigil tab appears and pulses all day. Tuesday: the Recap pulses all day.
   function navMarks(v) {
-    const today = dayKey(new Date()), dow = new Date().getDay(), vs = vigilState(), showV = !!(vs.L && (vs.open || vs.preview));
-    if (v === "vigil" || v === "week") store.set("gb-seen-" + v, today);
-    const pulse = { vigil: showV && store.get("gb-seen-vigil") !== today, week: dow === 2 && store.get("gb-seen-week") !== today };
+    const dow = new Date().getDay(), vs = vigilState(), showV = !!(vs.L && (vs.open || vs.preview));
+    const pulse = { vigil: showV, week: dow === 2 };
     document.querySelectorAll('a[href="#vigil"]').forEach(a => { a.hidden = !showV; });
     document.querySelector("nav.bottom").classList.toggle("six", showV);
     document.querySelectorAll('a[href="#vigil"], a[href="#week"]').forEach(a => { const k = a.getAttribute("href").slice(1); a.classList.toggle("ping", !!pulse[k]); });
@@ -4041,7 +4042,7 @@ function wTeam(W, tm) {
     navMarks(v);
     const y = window.scrollY;
     const fn = { home, vigil, standings, week, rivals, members, history, draft, moves, trades, chart, advisor, gifts, prophets, work }[v];
-    const view = $("view");
+    const view = $("view"); view.dataset.view = v;
     try { view.innerHTML = fn(); }
     catch (e) { view.innerHTML = `<p class="empty">This page did not load: ${esc(e.message)}. Pick another season or refresh.</p>`; return; }
     view.querySelectorAll("table[data-hide]").forEach(t => {

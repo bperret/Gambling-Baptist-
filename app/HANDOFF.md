@@ -75,10 +75,10 @@ The commissioner sends the export JSON (or uses the drop zone), the Reddit trade
     - Team factor: rho 0.27 for QB, WR, TE and 0.07 for RB, K (measured teammate correlations). Opposing teams are independent.
     - Leave-one-out calibration on 1,751 starter games: 10.7% beat the 90th percentile, 1.8% the 97.5th, 1.0% the 99th. Own-games-only replays put 8% above their 99th. Recheck with `checks/vigil_calib.py` if the constants change.
   - Categories: Literally Impossible, when the trailing team has nobody left. Miracle Territory, when the trailer wins 1% or less of replays. Everything else is live. The game of the night is the live game with the biggest playoff swing from What's at Stake.
-  - Chart: quantile dot plot, 50 dots, trailer minus leader final margin, with the zero line and a "Now" marker.
+  - Chart: quantile dot plot, 50 dots. Same sides as the card header: trailer left, leader right. x is the leader's final edge, so comebacks sit left of the line. The page is centered (`main[data-view="vigil"]`).
   - Keys: need line, rooting guide (skill +1, kicker +0.5, defense pulls against the other offense; kicker plus the defense facing that kicker's team means "field goals, not touchdowns"), kicker duel, shared-drive line.
   - Lineup confession: a starter with 0 who was on bye or listed Out, Doubtful, IR, PUP, Sus, NA, DNR, or COV (not Questionable), and a bench player who already played and scored 5+ that fits the slot directly or through one flex shuffle. One per man per page.
-  - Nav: the tab and a pulsing dot show on Mondays (6-slot bottom bar). The Weekly Recap (renamed from Tuesday Recap) pulses on Tuesdays. A pulse stops once that page is opened that day.
+  - Nav: the tab and a pulsing dot show on Mondays (6-slot bottom bar). The Weekly Recap (renamed from Tuesday Recap) pulses on Tuesdays. Both pulse all day, even after the page is opened (Benton's call).
   - Test data: `python3 checks/vigil_fixture.py data.json sim/data.json`, then `node checks/vigil.js sim sim` (Monday, Tuesday, Wednesday, and stale-Monday clocks; 360, 390, and 768 widths; both themes).
 - **Recap awards:** always 12 tiles, by `recapTiles`. Priority: top and low score, blowout, close, tough, lucky, top player, upset, bad beat, regret, the two Prophecy tiles, Asleep, bench, then fill tiles (Good and Faithful, Armor of God, Best Foot Forward, Still Small Voice, Revival Meeting).
 - **Sermon:** `sermonBook()` plans every week in order, so past weeks never change. Bank lines rotate through every option before repeating.
@@ -100,5 +100,6 @@ The commissioner sends the export JSON (or uses the drop zone), the Reddit trade
 - **Reply style:** direct and concise, no flattery. Push back when warranted. Never end with a question. Cite sources for product or capability claims, or say "not certain, let me check." No em dashes, plain technical English.
 
 ## Open items
+- **Thread for later:** Benton sent a long screenshot of a text thread on Nov 9 and said it is for later. It is saved at `app/inbox/2026-11-09-thread-for-later.jpg`. Ask what he wants done with it before acting.
 - **Testimonies:** live with the full Week 8 dump. Team-only notes and players off rosters are left out. Rosters come from the latest scored week, as in the app.
 - No 2026 trade has involved three or more teams, so multi-team scoring has only been tested on a made-up trade.

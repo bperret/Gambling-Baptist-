@@ -415,14 +415,24 @@ table.pp td.l-al { white-space: normal; min-width: 58px; line-height: 1.25; }
 
 /* Pulse dot: the vigil on Mondays, the Recap on Tuesdays */
 .ping { position: relative; }
-.ping::after { content: ""; position: absolute; top: 4px; right: 2px; width: 9px; height: 9px; border-radius: 50%; background: var(--loss); box-shadow: 0 0 0 0 color-mix(in srgb, var(--loss) 55%, transparent); animation: ping 1.6s ease-out infinite; }
-nav.bottom .ping::after { top: 9px; right: calc(50% - 17px); }
-@keyframes ping { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--loss) 55%, transparent); } 75%, 100% { box-shadow: 0 0 0 9px transparent; } }
+.ping::after { content: ""; position: absolute; top: 3px; right: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--loss); box-shadow: 0 0 0 0 color-mix(in srgb, var(--loss) 55%, transparent); animation: ping 1.6s ease-out infinite; }
+nav.bottom .ping::after { top: 8px; right: calc(50% - 18px); border: 2px solid var(--surface); }
+@keyframes ping { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--loss) 60%, transparent); opacity: 1; } 50% { opacity: .55; } 70% { box-shadow: 0 0 0 10px transparent; opacity: 1; } 100% { box-shadow: 0 0 0 0 transparent; } }
 @media (prefers-reduced-motion: reduce) { .ping::after { animation: none; } }
 nav.bottom.six { grid-template-columns: repeat(6, 1fr); }
 
 /* Monday Night Vigil */
-.vg-tile { border-color: var(--blue); }
+.vg-tile { border-color: var(--blue); text-align: center; }
+/* The vigil page reads centered */
+main[data-view="vigil"] > h2, main[data-view="vigil"] > .kick, main[data-view="vigil"] > .warn, main[data-view="vigil"] > .empty { text-align: center; margin-left: auto; margin-right: auto; }
+main[data-view="vigil"] .jump { justify-content: safe center; }
+.vg-card h3, .vg-kick, .vg-need, .vg-cap, .vg-stakes, .vg-confess, .vg-row { text-align: center; }
+.vg-card h3 { margin-top: 16px; }
+.vg-side, .vg-side:last-child { text-align: center; justify-items: center; }
+.vg-keys { list-style: none; padding: 0; text-align: center; }
+.vg-keys li + li { padding-top: 6px; border-top: 1px solid var(--line); }
+.vg-confess .tag { display: table; margin: 0 auto 6px; }
+main[data-view="vigil"] details.explain { text-align: left; }
 .vg-tile-t { margin: 6px 0 0; font-weight: 600; line-height: 1.4; }
 .vg-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 14px 12px; margin: 12px 0 16px; }
 .vg-card.big { border: 2px solid var(--tan); background: linear-gradient(var(--tan-tint), var(--surface) 160px); }
