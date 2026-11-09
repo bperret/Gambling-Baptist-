@@ -1,5 +1,5 @@
 
-const DYK_SEED = 38;
+const DYK_SEED = 39;
 // League model built from the export file. Pure functions, no DOM.
 // Trades reversed within 48 hours: the later trade's adds are the earlier trade's drops, and the other way around
 function reversedTrades(txs) {
@@ -3822,15 +3822,25 @@ function wTeam(W, tm) {
     };
     // Final margins, trailer minus leader, over VG_N replays of Monday
     const replay = (lead, trail) => {
-      const all = trail.left.concat(lead.left), teams = [...new Set(all.map(x => x.team))], out = new Float64Array(VG_N);
+      const all = trail.left.concat(lead.left), nT = trail.left.length, teams = [...new Set(all.map(x => x.team))];
+      const out = new Float64Array(VG_N), draws = all.map(() => new Float32Array(VG_N));
       all.forEach(x => logOf(x.pid));
       for (let i = 0; i < VG_N; i++) {
         const zt = {}; teams.forEach(t => { zt[t] = gauss(); });
         let m = trail.pts - lead.pts;
-        trail.left.forEach(x => { m += drawOne(logs[x.pid], zt[x.team]); }); lead.left.forEach(x => { m -= drawOne(logs[x.pid], zt[x.team]); });
+        all.forEach((x, j) => { const v = drawOne(logs[x.pid], zt[x.team]); draws[j][i] = v; m += j < nT ? v : -v; });
         out[i] = m;
       }
-      return out.sort();
+      // Each player: his average across all replays, and across the replays the trailer wins
+      const stats = all.map((x, j) => {
+        let sa = 0, sw = 0, nw = 0; const d = draws[j];
+        for (let i = 0; i < VG_N; i++) { sa += d[i]; if (out[i] > 0) { sw += d[i]; nw++; } }
+        const sorted = Float32Array.from(d).sort(), med = sorted[VG_N >> 1];
+        // Comebacks when he stays under his median
+        let nq = 0, wq = 0; for (let i = 0; i < VG_N; i++) if (d[i] < med) { nq++; if (out[i] > 0) wq++; }
+        return { x, trail: j < nT, mean: sa / VG_N, winMean: nw ? sw / nw : null, med, quietWin: nq ? wq / nq : 0 };
+      });
+      return { margins: out.slice().sort(), stats };
     };
     const share = (arr, shift) => { let n = 0; for (let i = 0; i < arr.length; i++) if (arr[i] + (shift || 0) > 0) n++; return n / arr.length; };
     const byMid = {}; L.rows.forEach(r => { if (r.matchup_id != null) (byMid[r.matchup_id] = byMid[r.matchup_id] || []).push(r); });
@@ -3840,7 +3850,7 @@ function wTeam(W, tm) {
       const lead = a.pts >= b.pts ? a : b, trail = lead === a ? b : a, gap = Math.round((lead.pts - trail.pts) * 100) / 100;
       const g = { lead, trail, gap, margins: null, win: 0 };
       if (!trail.left.length) g.cat = "impossible";
-      else { g.margins = replay(lead, trail); g.win = share(g.margins); g.cat = g.win <= VG_MIRACLE ? "miracle" : "live"; }
+      else { const rp = replay(lead, trail); g.margins = rp.margins; g.pstats = rp.stats; g.win = share(g.margins); g.cat = g.win <= VG_MIRACLE ? "miracle" : "live"; }
       if (sdOk) { const c = u => sd.pp.stakes.cond[u]; const sw = u => (c(u) && c(u).winPo != null && c(u).lossPo != null ? c(u).winPo - c(u).lossPo : 0); g.swing = sw(lead.uid) + sw(trail.uid); }
       else g.swing = 0;
       g.roast = [lead, trail].map(sd0 => blunder(sd0, g)).filter(Boolean);
@@ -3913,49 +3923,59 @@ function wTeam(W, tm) {
   const vgPlayers = (V, list) => list.map(x => `${pn(x.pid, V.nameOf(x.pid))}${x.pos === "DEF" ? "" : ` <span class="muted">${esc(x.pos)}</span>`}`).join(", ");
   const vgList = (V, list) => { const n = list.map(x => pn(x.pid, V.nameOf(x.pid))); return n.length < 2 ? n.join("") : n.slice(0, -1).join(", ") + (n.length > 2 ? "," : "") + " and " + n[n.length - 1]; };
   // Per player: what his 2026 games say about this target
+  const r0 = v => Math.round(v);
+  const oxford = a => a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + (a.length > 2 ? "," : "") + " and " + a[a.length - 1];
+  // What the trailer has to find, in plain words
   function vgNeedLine(V, g) {
     const T = ownerName(g.trail.uid), Lh = ownerName(g.lead.uid), need = g.gap + 0.01;
+    const typ = g.margins ? g.margins[g.margins.length >> 1] + g.gap : null;
+    const tail = typ == null ? "" : typ >= need ? ` A normal night gets him about ${r0(typ)}, so he only needs his guys to show up.` : ` A normal night gets him about ${r0(typ)}, so somebody has to have a big one.`;
     if (!g.lead.left.length && g.trail.left.length === 1) {
       const x = g.trail.left[0], lg = V.logOf(x.pid), hit = lg.games.filter(e => e.v >= need).length;
-      return `${esc(T)} needs <b>${f1(need)}</b> from ${pn(x.pid, V.nameOf(x.pid))}. ${lg.games.length ? `He has done that in <b>${hit} of ${lg.games.length}</b> games this year.` : "He has no games in our scoring this year."}`;
+      return `${esc(T)} needs <b>${f1(need)}</b> from ${pn(x.pid, V.nameOf(x.pid))}.${lg.games.length ? ` He has cleared that in ${hit} of ${lg.games.length} games this year.` : ""}`;
     }
-    const med = g.margins ? g.margins[Math.floor(g.margins.length / 2)] + g.gap : null, typ = med == null ? "" : ` On a middle-of-the-road night they net ${f1(med)}.`;
-    if (!g.lead.left.length) return `${esc(T)} needs <b>${f1(need)}</b> combined from ${vgList(V, g.trail.left)}. ${esc(Lh)} has nobody left to answer.${typ}`;
-    return `${esc(T)}'s ${vgList(V, g.trail.left)} must outscore ${esc(Lh)}'s ${vgList(V, g.lead.left)} by <b>${f1(need)}</b>.${typ}`;
+    if (!g.lead.left.length) return `${esc(T)} needs <b>${f1(need)}</b> from ${vgList(V, g.trail.left)}, and ${esc(Lh)} has nobody left to answer.${tail}`;
+    return `${esc(T)}'s ${vgList(V, g.trail.left)} have to outscore ${esc(Lh)}'s ${vgList(V, g.lead.left)} by <b>${f1(need)}</b>.${tail}`;
   }
-  // Who each man is pulling for, from his players' teams. Kickers pull half as hard. A defense pulls against the other offense.
-  function vgRoot(V, side, other) {
-    const nm = ownerName(side.uid);
-    if (!side.left.length) return `<b>${esc(nm)}</b> has nobody left. All he can do is watch and pray.`;
-    const pull = {}, k = side.left.filter(x => x.pos === "K"), dst = side.left.filter(x => x.pos === "DEF");
-    side.left.forEach(x => {
-      if (x.pos === "DEF") { const o = V.L.teams[x.team] && V.L.teams[x.team].opp; if (o) pull[o] = (pull[o] || 0) - 1; }
-      else pull[x.team] = (pull[x.team] || 0) + (x.pos === "K" ? 0.5 : 1);
+  // Keys to victory: the need, what a win looks like in the replays, the leader's lever, and each NFL team both men have a stake in
+  function vgKeys(V, g) {
+    const T = ownerName(g.trail.uid), Lh = ownerName(g.lead.uid), out = [vgNeedLine(V, g)];
+    const P = x => pn(x.pid, V.nameOf(x.pid)), opp = t => V.L.teams[t] && V.L.teams[t].opp;
+    const st0 = (g.pstats || []).filter(p => p.trail && p.winMean != null);
+    // What a win looks like: the trailer's players who have to rise most above their usual
+    const lift = st0.map(p => ({ p, up: p.winMean - p.mean })).filter(e => e.up >= 2).sort((a, b) => b.up - a.up).slice(0, 2);
+    if (lift.length && g.win < 0.98) out.push(`In the replays ${esc(T)} wins, ${oxford(lift.map(e => `${P(e.p.x)} averages ${r0(e.p.winMean)} (he usually gives about ${r0(e.p.mean)})`))}. That is the path.`);
+    // The leader's lever: the one player he most needs held down
+    const lever = lift[0] && lift[0].p;
+    const need = g.gap + 0.01, now50 = Math.round(g.win * 50);
+    if (!g.lead.left.length && g.trail.left.length === 1) {
+      // One man against nobody: the leader's whole night is that player's number
+      const x = g.trail.left[0], d = x.pos === "DEF" ? null : opp(x.team), lg = V.logOf(x.pid), under = lg.games.filter(e => e.v < need).length;
+      const rec = !lg.games.length ? "" : under === 0 ? ` Nobody has held him under that this year.` : under === 1 ? ` That has happened once this year.` : ` That has happened ${under} times in ${lg.games.length} games this year.`;
+      out.push(`${esc(Lh)} has nobody left, so his whole night rides on ${d ? `the ${esc(nfl(d))} defense holding ` : "a quiet night from "}${P(x)}${d ? ` under ${r0(need)}` : ""}.${rec}`);
+    } else if (lever) {
+      const k = Math.round(lever.quietWin * 50);
+      const drop = k === 0 ? `${esc(T)}'s comeback is all but over` : k <= now50 / 2 ? `${esc(T)} comes back in just ${k} of 50` : `${esc(T)}'s comebacks fall from ${now50} of 50 to ${k}`;
+      out.push(`${esc(Lh)}'s best friend tonight is a quiet ${P(lever.x)}. Keep him under ${r0(lever.med)} and ${drop}.`);
+      if (!g.lead.left.length) out.push(`${esc(Lh)} has nobody left to help. He can only watch and pray.`);
+    } else if (!g.lead.left.length) out.push(`${esc(Lh)} has nobody left. All he can do is watch and pray.`);
+    // Shared NFL teams: say exactly which play helps which man
+    const sk = side => side.left.filter(x => x.pos !== "DEF" && x.pos !== "K"), kk = side => side.left.filter(x => x.pos === "K"), dd = side => side.left.filter(x => x.pos === "DEF");
+    const sides = [[g.trail, T], [g.lead, Lh]];
+    const teams = [...new Set(g.trail.left.concat(g.lead.left).map(x => x.pos === "DEF" ? null : x.team).filter(Boolean))];
+    teams.forEach(t => {
+      const [a, an] = sides[0], [b, bn] = sides[1];
+      const sa = sk(a).filter(x => x.team === t), sb = sk(b).filter(x => x.team === t), ka = kk(a).filter(x => x.team === t), kb = kk(b).filter(x => x.team === t);
+      if (sa.length && sb.length) out.push(`Both men need ${esc(nfl(t))} points, so it comes down to who scores them: ${vgList(V, sa)} for ${esc(an)}, ${vgList(V, sb)} for ${esc(bn)}.`);
+      else if (sa.length && kb.length) out.push(`Every ${esc(nfl(t))} drive is a tug of war. A ${vgList(V, sa)} touchdown helps ${esc(an)}. A drive that stalls into a ${P(kb[0])} field goal helps ${esc(bn)}.`);
+      else if (sb.length && ka.length) out.push(`Every ${esc(nfl(t))} drive is a tug of war. A ${vgList(V, sb)} touchdown helps ${esc(bn)}. A drive that stalls into a ${P(ka[0])} field goal helps ${esc(an)}.`);
     });
-    const parts = [];
-    const fgTeam = k.map(x => x.team).find(t => dst.some(d => V.L.teams[d.team] && V.L.teams[d.team].opp === t));
-    Object.entries(pull).sort((p, q) => Math.abs(q[1]) - Math.abs(p[1])).forEach(([t, v]) => {
-      if (t === fgTeam) parts.push(`the ${esc(nfl(t))} to stall in the red zone: field goals, not touchdowns`);
-      else if (v > 0) parts.push(`the ${esc(nfl(t))} to score early and often`);
-      else if (v < 0) parts.push(`the ${esc(nfl(t))} held down`);
-    });
-    Object.keys(pull).filter(t => pull[t] === 0).forEach(t => parts.push(`the ${esc(nfl(t))} to do just enough, since he has players on both sides of that ball`));
-    const cross = side.left.filter(x => x.pos !== "DEF" && x.pos !== "K" && dst.some(d => V.L.teams[d.team] && V.L.teams[d.team].opp === x.team));
-    let h = `<b>${esc(nm)}</b> wants ${parts.length ? parts.join(", and ") : "a quiet night"}.`;
-    if (cross.length) h += ` His ${vgList(V, cross)} and his ${esc(nfl(dst[0].team))} defense pull against each other.`;
-    return h;
-  }
-  function vgDuel(V, g) {
-    const out = [];
-    const ka = g.lead.left.filter(x => x.pos === "K"), kb = g.trail.left.filter(x => x.pos === "K");
-    if (ka.length && kb.length) out.push(`Kicker duel: ${pn(kb[0].pid, V.nameOf(kb[0].pid))} against ${pn(ka[0].pid, V.nameOf(ka[0].pid))}.`);
-    const teamsA = new Set(g.lead.left.filter(x => x.pos !== "DEF").map(x => x.team)), shared = g.trail.left.filter(x => x.pos === "DEF").map(x => V.L.teams[x.team] && V.L.teams[x.team].opp).filter(t => t && teamsA.has(t));
-    const sharedB = new Set(g.trail.left.filter(x => x.pos !== "DEF").map(x => x.team)), sharedA = g.lead.left.filter(x => x.pos === "DEF").map(x => V.L.teams[x.team] && V.L.teams[x.team].opp).filter(t => t && sharedB.has(t));
-    [...new Set(shared.concat(sharedA))].forEach(t => out.push(`Every ${esc(nfl(t))} drive swings this one. One man's offense is the other man's defense.`));
-    // Both men need the same offense: the fight is over who gets the touches
-    const sk = side => side.left.filter(x => x.pos !== "DEF" && x.pos !== "K");
-    const both = [...new Set(sk(g.trail).map(x => x.team))].filter(t => sk(g.lead).some(x => x.team === t));
-    both.forEach(t => out.push(`Both men want ${esc(nfl(t))} points. It comes down to who gets them: ${vgList(V, sk(g.trail).filter(x => x.team === t))} or ${vgList(V, sk(g.lead).filter(x => x.team === t))}.`));
+    // A defense lined up against the other man's players
+    sides.forEach(([me, mn], i) => { const [them, tn] = sides[1 - i]; dd(me).forEach(d => { const o = opp(d.team), hit = them.left.filter(x => x.pos !== "DEF" && x.team === o); if (hit.length) out.push(`${esc(mn)}'s ${P(d)} is lined up directly against ${esc(tn)}'s ${vgList(V, hit)}. Every sack and stop counts twice.`); }); });
+    // His own script: a kicker plus the defense facing that kicker's team
+    sides.forEach(([me, mn]) => { kk(me).forEach(k => { const d = dd(me).find(x => opp(x.team) === k.team); if (d) out.push(`${esc(mn)} wants the ${esc(nfl(k.team))} to move the ball and then stall. ${P(k)} field goals score for him, and ${esc(nfl(k.team))} touchdowns cost his ${P(d)}.`); }); });
+    const ka = kk(g.trail)[0], kb = kk(g.lead)[0];
+    if (ka && kb && ka.team !== kb.team) out.push(`On top of all that, it is a kicker duel: ${P(ka)} against ${P(kb)}.`);
     return out;
   }
   function vgConfess(V, b, g) {
@@ -3978,7 +3998,7 @@ function wTeam(W, tm) {
     if (big) h += `<p class="vg-kick">Game of the night · biggest playoff swing</p>`;
     h += `<div class="vg-head">${side(T, "Still to play")}<div class="vg-gap"><span>down</span><b class="num">${f1(g.gap)}</b></div>${side(Lg, "Still to play")}</div>`;
     h += vgDots(g);
-    h += `<h3>Keys to victory</h3><p class="vg-need">${vgNeedLine(V, g)}</p><ul class="vg-keys"><li>${vgRoot(V, T, Lg)}</li><li>${vgRoot(V, Lg, T)}</li>${vgDuel(V, g).map(x => `<li>${x}</li>`).join("")}</ul>`;
+    h += `<h3>Keys to victory</h3><ul class="vg-keys">${vgKeys(V, g).map(x => `<li>${x}</li>`).join("")}</ul>`;
     const thin = T.left.concat(Lg.left).filter(x => V.logOf(x.pid).thin);
     if (thin.length) h += `<p class="fine">Thin record: ${vgList(V, thin)} ${thin.length === 1 ? "has" : "have"} fewer than 3 games this year, so the curve leans on this week's projection and his position's spread.</p>`;
     h += vgStakes(V, g);
@@ -3994,12 +4014,13 @@ function wTeam(W, tm) {
     const games = V.nflGames.map(([a, b]) => b ? `${nfl(a)} vs. ${nfl(b)}` : nfl(a)).join(" and ");
     let h = "";
     if (vs.preview) h += `<p class="warn">Commissioner preview. Members see this page on Mondays only, from an export taken that day.</p>`;
-    h += sec("Monday Night Vigil", `Week ${V.L.week}, before ${games ? esc(games) : "the Monday game"}. "Watch and pray." Matthew 26:41. Snapshot from ${esc(when)}; it does not update during the game.`);
+    h += sec("Monday Night Vigil", `Week ${V.L.week}, before ${games ? esc(games) : "the Monday game"}. "Watch and pray." Matthew 26:41. Snapshot from ${esc(when)}.`);
     const live = V.games.filter(g => g.cat === "live"), mir = V.games.filter(g => g.cat === "miracle"), imp = V.games.filter(g => g.cat === "impossible");
     if (V.feature) h += vgCard(V, V.feature, true);
     const rest = live.filter(g => g !== V.feature);
-    if (rest.length) { h += `<h2>Still in the balance</h2>`; rest.forEach(g => { h += vgCard(V, g, false); }); }
-    if (!live.length) h += `<p class="empty">No game is still in the balance. Every matchup is settled or close to it.</p>`;
+    h += sec("Still in the balance", "Real games, where the trailing team wins more than 1% of replays.");
+    if (rest.length) rest.forEach(g => { h += vgCard(V, g, false); });
+    else h += `<p class="vg-none">${V.feature ? "Nothing else is close. The game of the night is the only one still in the balance." : "No game is still in the balance this week."}</p>`;
     const row = g => {
       const T = ownerName(g.trail.uid), Lh = ownerName(g.lead.uid);
       let line;
@@ -4007,8 +4028,10 @@ function wTeam(W, tm) {
       else line = g.trail.left.length || g.lead.left.length ? `${esc(Lh)} leads ${esc(T)} ${f1(g.lead.pts)} to ${f1(g.trail.pts)}. ${esc(T)} has nobody left${g.lead.left.length ? `. ${vgPlayers(V, g.lead.left)} still play${g.lead.left.length === 1 ? "s" : ""}, for style points` : ""}.` : `Final: ${esc(Lh)} ${f1(g.lead.pts)}, ${esc(T)} ${f1(g.trail.pts)}.`;
       return `<div class="vg-row"><div class="vg-row-h">${whoInline(g.lead.uid, V.s)} <span class="muted">over</span> ${whoInline(g.trail.uid, V.s)}</div><p>${line}</p>${g.roast.map(b => vgConfess(V, b, g)).join("")}</div>`;
     };
-    if (mir.length) { h += sec("Miracle Territory", `"With God all things are possible." Matthew 19:26. The trailing team wins in 1% or fewer of our replays.`); h += mir.map(row).join(""); }
-    if (imp.length) { h += sec("Literally Impossible", `"With man this is impossible." Matthew 19:26. The trailing team has nobody left to play.`); h += imp.map(row).join(""); }
+    h += sec("Miracle Territory", `"With God all things are possible." Matthew 19:26. The trailing team wins in 1% or fewer of our replays.`);
+    h += mir.length ? mir.map(row).join("") : `<p class="vg-none">No games this week. Every trailing team has either a real shot or no shot at all.</p>`;
+    h += sec("Literally Impossible", `"With man this is impossible." Matthew 19:26. The trailing team has nobody left to play.`);
+    h += imp.length ? imp.map(row).join("") : `<p class="vg-none">None yet. Every game still has someone left to play.</p>`;
     h += `<details class="explain"><summary>How the replays work</summary><p>No Sleeper win odds anywhere. Each player still to play gets a curve of possible nights, and Monday is replayed ${VG_N.toLocaleString()} times.</p><p>The middle of his curve is his 2026 average in our scoring, pulled toward this week's projection by three games' worth. The width is his own game-to-game swing, blended with how much players at his position swing, then widened by 40%. Real games beat narrower curves too often, so a 40-point night he has not had yet still shows up. Skill players get a right-leaning curve with a long upside tail. Kickers and defenses get a symmetric one, and defenses can go negative.</p><p>Every replay also carries a dud chance at each position's 2026 rate: an early exit or a near-zero night. Quarterbacks and their pass catchers share a team factor, so they rise and fall together. Opposing teams draw separately.</p><p>We tested this on 1,751 starter games from this season, predicting each one without it. 10.7% topped the 90th percentile, 1.8% the 97.5th, and 1.0% the 99th. A curve built from a player's own games alone missed badly: 8% of games topped what it called the 99th.</p><p>Miracle Territory: the trailing team wins in 1% or fewer of replays. Literally Impossible: the trailing team has nobody left. Playoff odds come from What's at Stake. Lineup confessions flag a starter who was on bye or listed Out, Doubtful, or on a reserve list, while a bench player who fit that spot scored 5 or more.</details>`;
     return h;
   }
