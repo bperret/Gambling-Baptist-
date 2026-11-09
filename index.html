@@ -193,6 +193,14 @@ async function getProjections(state, cur) {
       if (d >= 0.01) out.check.worst.push([+w, pid, pts, mine]);
     }));
   }));
+  // This week's NFL games from the projection rows: team, opponent, and kickoff date when Sleeper sends them
+  jobs.push(async () => {
+    const res = await getJSON([`https://api.sleeper.com/projections/nfl/${season}/${week}?season_type=regular${POS}`, `https://api.sleeper.app/projections/nfl/regular/${season}/${week}`]);
+    if (!res || !Array.isArray(res.j)) return;
+    const G = {};
+    res.j.forEach(x => { if (x && x.team && x.opponent && !G[x.team]) G[x.team] = { opp: x.opponent, date: x.date || null, game: x.game_id || null }; });
+    out.games = G;
+  });
   await pool(jobs, 4);
   out.check.worst = out.check.worst.sort((a, b) => Math.abs(b[2] - b[3]) - Math.abs(a[2] - a[3])).slice(0, 25);
   out.pts = out.weeks[week] || {};
@@ -203,6 +211,30 @@ async function getProjections(state, cur) {
   return Object.keys(out.weeks).length ? out : null;
 }
 
+
+// This week, in progress: lineups and points so far, plus which NFL teams have not played yet.
+// A team has played once any of its players has a stat line with games played this week.
+async function getLive(state, cur, games) {
+  if (!state || state.season_type !== "regular" || !state.week || !cur) return null;
+  const season = state.season, week = state.week;
+  const rows = await get(`/league/${cur.league.league_id}/matchups/${week}`).catch(() => []);
+  if (!rows.length) { log("  Live week skipped: no matchups yet.", "bad"); return null; }
+  const res = await getJSON([`https://api.sleeper.com/stats/nfl/${season}/${week}?season_type=regular${POS}`, `https://api.sleeper.app/stats/nfl/regular/${season}/${week}`]);
+  const played = new Set(), pteam = {};
+  if (res && Array.isArray(res.j)) res.j.forEach(x => { const s = x.stats || {}; if (x.team && (s.gp > 0 || s.off_snp > 0 || s.def_snp > 0 || s.st_snp > 0)) played.add(x.team); if (x.team) pteam[String(x.player_id)] = x.team; });
+  const G = games || {}, teams = {};
+  Object.entries(G).forEach(([t, g]) => { teams[t] = { opp: g.opp, date: g.date, left: res ? !played.has(t) : null }; });
+  const live = {
+    week, at: new Date().toISOString(), statsOk: !!res,
+    rows: rows.map(r => ({ roster_id: r.roster_id, matchup_id: r.matchup_id, points: r.points, starters: r.starters, starters_points: r.starters_points, players: r.players, players_points: r.players_points })),
+    teams, pteam: {},
+  };
+  // Keep the stat-line team only for players in these lineups (it beats the player file after a midweek trade)
+  live.rows.forEach(r => (r.players || []).forEach(p => { if (pteam[p]) live.pteam[p] = pteam[p]; }));
+  const left = Object.keys(teams).filter(t => teams[t].left);
+  log(`  Live week ${week}: ${live.rows.length} lineups. Still to play: ${left.length ? left.join(", ") : res ? "nobody" : "unknown (no stats)"}.`, res ? "ok" : "bad");
+  return live;
+}
 
 // Inside claude.ai the page saves through the downloads capability; opened on its own it uses a normal download.
 let lastJSON = null, lastName = "league-export.json", dlPromise = null;
@@ -240,6 +272,7 @@ document.getElementById("go").addEventListener("click", async () => {
     }
     const cur = seasons.find(s => String(s.league.season) === String(state.season));
     const projections = await getProjections(state, cur);
+    const live = await getLive(state, cur, projections && projections.games).catch(e => { log("  Live week skipped: " + e.message, "bad"); return null; });
     log("Loading player names (large file)...");
     const want = new Set();
     if (projections) [projections.weeks, projections.act, projections.usage ? projections.usage.weeks : {}].forEach(m => Object.values(m).forEach(W => Object.keys(W).forEach(p => want.add(p))));
@@ -247,6 +280,7 @@ document.getElementById("go").addEventListener("click", async () => {
       for (const rows of Object.values(s.matchups)) for (const r of rows) (r.players || []).forEach(p => want.add(p));
       for (const rows of Object.values(s.transactions)) for (const t of rows) { Object.keys(t.adds || {}).forEach(p => want.add(p)); Object.keys(t.drops || {}).forEach(p => want.add(p)); }
       s.picks.forEach(p => want.add(p.player_id));
+      if (live && s === cur) live.rows.forEach(r => (r.players || []).forEach(p => want.add(p)));
       (s.rosterPlayers || []).forEach(p => want.add(p));
     }
     const all = await get("/players/nfl");
@@ -260,7 +294,7 @@ document.getElementById("go").addEventListener("click", async () => {
     });
     log(`  ${Object.keys(injuries).length} players with an injury status`);
     seasons.forEach(s => { delete s.rosterPlayers; });
-    const out = { format: "ffbc-sleeper-v3", exported: new Date().toISOString(), state: { season: state.season, week: state.week, season_type: state.season_type }, seasons, players, injuries, projections };
+    const out = { format: "ffbc-sleeper-v3", exported: new Date().toISOString(), state: { season: state.season, week: state.week, season_type: state.season_type }, seasons, players, injuries, projections, live };
     await saveFile("league-export.json", JSON.stringify(out));
     log(`Done. ${seasons.length} seasons, ${Object.keys(players).length} players, ${Object.keys(injuries).length} injury tags, ${projections ? Object.keys(projections.weeks).length + " weeks of projections" : "no projections"}. File saved as league-export.json.`, "ok");
   } catch (e) {
