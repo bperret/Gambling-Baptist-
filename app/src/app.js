@@ -1,5 +1,5 @@
 
-const DYK_SEED = 36;
+const DYK_SEED = 37;
 // League model built from the export file. Pure functions, no DOM.
 // Trades reversed within 48 hours: the later trade's adds are the earlier trade's drops, and the other way around
 function reversedTrades(txs) {
@@ -3741,6 +3741,12 @@ function wTeam(W, tm) {
   const NFL = { ARI: "Cardinals", ATL: "Falcons", BAL: "Ravens", BUF: "Bills", CAR: "Panthers", CHI: "Bears", CIN: "Bengals", CLE: "Browns", DAL: "Cowboys", DEN: "Broncos", DET: "Lions", GB: "Packers", HOU: "Texans", IND: "Colts", JAX: "Jaguars", KC: "Chiefs", LV: "Raiders", LAC: "Chargers", LAR: "Rams", LA: "Rams", MIA: "Dolphins", MIN: "Vikings", NE: "Patriots", NO: "Saints", NYG: "Giants", NYJ: "Jets", PHI: "Eagles", PIT: "Steelers", SF: "49ers", SEA: "Seahawks", TB: "Buccaneers", TEN: "Titans", WAS: "Commanders" };
   const nfl = t => NFL[t] || t;
   const VG_N = 10000, VG_DOTS = 50, VG_MIRACLE = 0.01;
+  // Calibrated Nov 9 on 1,751 starter games from 2026, each predicted without itself:
+  // 10.7% beat the 90th percentile, 1.8% the 97.5th, 1.0% the 99th. Low tail: 2.9% under the 1st, mostly exact zeros.
+  const VG_SAT = ["Out", "Doubtful", "IR", "PUP", "Sus", "NA", "DNR", "COV"];
+  const VG_POS = ["QB", "RB", "WR", "TE", "K", "DEF"], VG_WIDEN = 1.4, VG_KM = 3, VG_KS = 4;
+  const VG_RHO = { QB: 0.27, WR: 0.27, TE: 0.27, RB: 0.07, K: 0.07, DEF: 0 };
+  const VG_FALLBACK = { QB: { cv: 0.45, dud: 0.043, avg: 18.8 }, RB: { cv: 0.55, dud: 0.042, avg: 13.9 }, WR: { cv: 0.59, dud: 0.069, avg: 12.5 }, TE: { cv: 0.59, dud: 0.104, avg: 11.5 }, K: { cv: 0.55, dud: 0, avg: 8.6 }, DEF: { cv: 0.82, dud: 0, avg: 7.3 } };
   const dayKey = d => { const x = new Date(d); return x.getFullYear() + "-" + (x.getMonth() + 1) + "-" + x.getDate(); };
   // Open on the viewer's Monday, and only for an export taken that same day. The commissioner can preview any day.
   function vigilState() {
@@ -3762,17 +3768,41 @@ function wTeam(W, tm) {
     Object.entries(U).forEach(([w, rows]) => Object.values(rows).forEach(r => { if (r && r[0]) (teamWeeks[r[0]] = teamWeeks[r[0]] || new Set()).add(+w); }));
     // A player's 2026 games: weeks he took the field (kickers and defenses: weeks his team played)
     const logs = {};
-    const logOf = pid => {
-      if (logs[pid]) return logs[pid];
+    const gamesOf = pid => {
       const pos = posOf(pid), out = [];
       wk.forEach(w => {
         const a = A[w] || {}, u = (U[w] || {})[pid];
         if (pos === "K" || pos === "DEF") { const t = teamOf(pid); if (pid in a && teamWeeks[t] && teamWeeks[t].has(w)) out.push({ w, v: a[pid] }); }
         else if (u && u[1] > 0) out.push({ w, v: a[pid] || 0 });
       });
-      const thin = out.length < 3, pj = proj.pts && proj.pts[pid];
-      const pool = out.slice(); if (thin && pj != null) while (pool.length < 3) pool.push({ w: null, v: pj });
-      return (logs[pid] = { games: out, pool, thin });
+      return out;
+    };
+    // Position spreads, measured from this season: players with 4+ games and a starter's average
+    const mean = x => x.reduce((p, q) => p + q, 0) / x.length;
+    const sdv = x => { const m = mean(x); return Math.sqrt(x.reduce((p, q) => p + (q - m) ** 2, 0) / (x.length - 1)); };
+    const prior = {};
+    {
+      const seen = new Set(); wk.forEach(w => Object.keys(A[w] || {}).forEach(p => seen.add(p)));
+      const by = {};
+      seen.forEach(pid => { const ps = posOf(pid); if (!VG_POS.includes(ps)) return; const g = gamesOf(pid).map(e => e.v); if (g.length < 4) return; const m = mean(g); if (m < (ps === "K" || ps === "DEF" ? 5 : 7)) return; (by[ps] = by[ps] || []).push({ g, m }); });
+      VG_POS.forEach(ps => {
+        const L = by[ps] || [];
+        if (L.length < 5) { prior[ps] = VG_FALLBACK[ps]; return; }
+        const cv = L.map(x => sdv(x.g) / x.m).sort((p, q) => p - q), all = L.flatMap(x => x.g.map(v => ({ v, m: x.m })));
+        prior[ps] = { cv: cv[Math.floor(cv.length / 2)], dud: all.filter(e => e.v < 0.25 * e.m).length / all.length, avg: mean(L.map(x => x.m)) };
+      });
+    }
+    // Each player: mean = his games, leaning on this week's projection by 3 games' worth; spread = his own, leaning on his position by 4 games' worth, widened 1.4x
+    const logOf = pid => {
+      if (logs[pid]) return logs[pid];
+      const ps = VG_POS.includes(posOf(pid)) ? posOf(pid) : "WR", pr0 = prior[ps], g = gamesOf(pid), v = g.map(e => e.v), n = v.length;
+      const pj = proj.pts && proj.pts[pid] != null ? proj.pts[pid] : null;
+      const own = n ? mean(v) : (pj != null ? pj : pr0.avg);
+      const mu = Math.max(1, pj != null ? (n * own + VG_KM * pj) / (n + VG_KM) : own);
+      const sp = pr0.cv * mu, so = n > 1 ? sdv(v) : sp;
+      const sd = Math.sqrt((n * so * so + VG_KS * sp * sp) / (n + VG_KS)) * VG_WIDEN;
+      const skew = ps !== "K" && ps !== "DEF", s2 = skew ? Math.log(1 + (sd / mu) ** 2) : 0;
+      return (logs[pid] = { games: g, n, mu, sd, skew, lm: skew ? Math.log(mu) - s2 / 2 : 0, ls: Math.sqrt(s2), dud: skew ? pr0.dud : 0, rho: VG_RHO[ps], thin: n < 3, pos: ps });
     };
     const sideOf = r => {
       const uid = s.rosterOwner[r.roster_id];
@@ -3782,15 +3812,22 @@ function wTeam(W, tm) {
     };
     let seed = 20261109;
     const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+    const gauss = () => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+    // One player's night: a dud (early exit, near zero) at his position's dud rate, otherwise a draw from his curve.
+    // Teammates share a team factor, so a quarterback and his receivers rise and fall together.
+    const drawOne = (f, zt) => {
+      if (f.dud && rnd() < f.dud) return rnd() * 0.25 * f.mu;
+      const z = Math.sqrt(f.rho) * zt + Math.sqrt(1 - f.rho) * gauss();
+      return f.skew ? Math.exp(f.lm + f.ls * z) : f.mu + f.sd * z;
+    };
     // Final margins, trailer minus leader, over VG_N replays of Monday
     const replay = (lead, trail) => {
       const all = trail.left.concat(lead.left), teams = [...new Set(all.map(x => x.team))], out = new Float64Array(VG_N);
       all.forEach(x => logOf(x.pid));
       for (let i = 0; i < VG_N; i++) {
-        const pick = {}; teams.forEach(t => { const ws = teamWeeks[t] ? [...teamWeeks[t]] : []; pick[t] = ws.length ? ws[Math.floor(rnd() * ws.length)] : null; });
-        const draw = x => { const g = logs[x.pid]; if (!g.pool.length) return 0; const hit = g.pool.find(e => e.w === pick[x.team]); return hit ? hit.v : g.pool[Math.floor(rnd() * g.pool.length)].v; };
+        const zt = {}; teams.forEach(t => { zt[t] = gauss(); });
         let m = trail.pts - lead.pts;
-        trail.left.forEach(x => { m += draw(x); }); lead.left.forEach(x => { m -= draw(x); });
+        trail.left.forEach(x => { m += drawOne(logs[x.pid], zt[x.team]); }); lead.left.forEach(x => { m -= drawOne(logs[x.pid], zt[x.team]); });
         out[i] = m;
       }
       return out.sort();
@@ -3814,7 +3851,7 @@ function wTeam(W, tm) {
       let worst = null;
       side.starters.forEach(x => {
         if (!x.pid || x.pid === "0" || x.pts !== 0 || leftT.has(x.team)) return;
-        const bye = !L.teams[x.team], inj = M.injuries[x.pid] && M.injuries[x.pid].s;
+        const bye = !L.teams[x.team], inj0 = M.injuries[x.pid] && M.injuries[x.pid].s, inj = VG_SAT.includes(inj0) ? inj0 : null;
         // Fits the slot directly, or through one shuffle: the flex starter slides into this slot and the bench player takes the flex
         const elig = new Set(s.slotElig[x.i] || [x.pos]);
         side.starters.forEach(y => { const e = s.slotElig[y.i]; if (y !== x && e && e.size > 1 && elig.has(y.pos)) e.forEach(q => elig.add(q)); });
@@ -3913,13 +3950,17 @@ function wTeam(W, tm) {
     const teamsA = new Set(g.lead.left.filter(x => x.pos !== "DEF").map(x => x.team)), shared = g.trail.left.filter(x => x.pos === "DEF").map(x => V.L.teams[x.team] && V.L.teams[x.team].opp).filter(t => t && teamsA.has(t));
     const sharedB = new Set(g.trail.left.filter(x => x.pos !== "DEF").map(x => x.team)), sharedA = g.lead.left.filter(x => x.pos === "DEF").map(x => V.L.teams[x.team] && V.L.teams[x.team].opp).filter(t => t && sharedB.has(t));
     [...new Set(shared.concat(sharedA))].forEach(t => out.push(`Every ${esc(nfl(t))} drive swings this one. One man's offense is the other man's defense.`));
+    // Both men need the same offense: the fight is over who gets the touches
+    const sk = side => side.left.filter(x => x.pos !== "DEF" && x.pos !== "K");
+    const both = [...new Set(sk(g.trail).map(x => x.team))].filter(t => sk(g.lead).some(x => x.team === t));
+    both.forEach(t => out.push(`Both men want ${esc(nfl(t))} points. It comes down to who gets them: ${vgList(V, sk(g.trail).filter(x => x.team === t))} or ${vgList(V, sk(g.lead).filter(x => x.team === t))}.`));
     return out;
   }
   function vgConfess(V, b, g) {
     const nm = ownerName(b.uid), xp = pn(b.x.pid, V.nameOf(b.x.pid)), bp = pn(b.bench.pid, V.nameOf(b.bench.pid));
     let h = `<b>${esc(nm)}</b> started ${xp}, ${esc(b.why)}, and left ${bp}'s ${f1(b.bench.pts)} on the bench.`;
     if (b.then != null && b.isLead) h += b.then <= VG_MIRACLE ? ` With that lineup, this game would already sit in Miracle Territory.` : ` Start him and ${esc(ownerName(g.trail.uid))} needs ${f1(g.gap + b.bench.pts)}, not ${f1(g.gap)}. Comebacks drop from ${Math.round(g.win * 50)} of 50 Mondays to ${Math.round(b.then * 50)}.`;
-    else if (b.then != null) h += b.then > 0.5 ? ` With that lineup he would be the favorite tonight.` : ` Start him and the gap is ${f1(Math.max(0, g.gap - b.bench.pts))}, not ${f1(g.gap)}.`;
+    else if (b.then != null) h += b.then > 0.5 && g.win <= 0.5 ? ` With that lineup he would be the favorite tonight.` : ` Start him and the gap is ${f1(Math.max(0, g.gap - b.bench.pts))}, not ${f1(g.gap)}.`;
     else if (b.flip) h += ` That alone would have won it.`;
     return `<p class="vg-confess"><span class="tag t-down">Lineup confession</span> ${h}</p>`;
   }
@@ -3937,7 +3978,7 @@ function wTeam(W, tm) {
     h += vgDots(g);
     h += `<h3>Keys to victory</h3><p class="vg-need">${vgNeedLine(V, g)}</p><ul class="vg-keys"><li>${vgRoot(V, T, Lg)}</li><li>${vgRoot(V, Lg, T)}</li>${vgDuel(V, g).map(x => `<li>${x}</li>`).join("")}</ul>`;
     const thin = T.left.concat(Lg.left).filter(x => V.logOf(x.pid).thin);
-    if (thin.length) h += `<p class="fine">Thin record: ${vgList(V, thin)} ${thin.length === 1 ? "has" : "have"} fewer than 3 games this year, so Sleeper's projection fills the gap.</p>`;
+    if (thin.length) h += `<p class="fine">Thin record: ${vgList(V, thin)} ${thin.length === 1 ? "has" : "have"} fewer than 3 games this year, so the curve leans on this week's projection and his position's spread.</p>`;
     h += vgStakes(V, g);
     g.roast.forEach(b => { h += vgConfess(V, b, g); });
     return h + `</article>`;
@@ -3966,7 +4007,7 @@ function wTeam(W, tm) {
     };
     if (mir.length) { h += sec("Miracle Territory", `"With God all things are possible." Matthew 19:26. The trailing team wins in 1% or fewer of our replays.`); h += mir.map(row).join(""); }
     if (imp.length) { h += sec("Literally Impossible", `"With man this is impossible." Matthew 19:26. The trailing team has nobody left to play.`); h += imp.map(row).join(""); }
-    h += `<details class="explain"><summary>How the replays work</summary><p>No Sleeper win odds anywhere. For each player still to play, we take his own 2026 games, scored with our league's settings, and replay Monday ${VG_N.toLocaleString()} times. Teammates draw the same week together, so a big Bills night lifts every Bills player at once. Opposing teams draw separately.</p><p>A player with fewer than 3 games this year gets Sleeper's projection for this week to fill the gap. Kickers and defenses count every week their team played.</p><p>Miracle Territory: the trailing team wins in 1% or fewer of replays. Literally Impossible: the trailing team has nobody left. Playoff odds come from What's at Stake. Lineup confessions flag a starter who sat or was on bye while a bench player at that spot scored 5 or more.</p></details>`;
+    h += `<details class="explain"><summary>How the replays work</summary><p>No Sleeper win odds anywhere. Each player still to play gets a curve of possible nights, and Monday is replayed ${VG_N.toLocaleString()} times.</p><p>The middle of his curve is his 2026 average in our scoring, pulled toward this week's projection by three games' worth. The width is his own game-to-game swing, blended with how much players at his position swing, then widened by 40%. Real games beat narrower curves too often, so a 40-point night he has not had yet still shows up. Skill players get a right-leaning curve with a long upside tail. Kickers and defenses get a symmetric one, and defenses can go negative.</p><p>Every replay also carries a dud chance at each position's 2026 rate: an early exit or a near-zero night. Quarterbacks and their pass catchers share a team factor, so they rise and fall together. Opposing teams draw separately.</p><p>We tested this on 1,751 starter games from this season, predicting each one without it. 10.7% topped the 90th percentile, 1.8% the 97.5th, and 1.0% the 99th. A curve built from a player's own games alone missed badly: 8% of games topped what it called the 99th.</p><p>Miracle Territory: the trailing team wins in 1% or fewer of replays. Literally Impossible: the trailing team has nobody left. Playoff odds come from What's at Stake. Lineup confessions flag a starter who was on bye or listed Out, Doubtful, or on a reserve list, while a bench player who fit that spot scored 5 or more.</details>`;
     return h;
   }
   // Home: on Monday, point at the vigil first
