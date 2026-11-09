@@ -1,5 +1,5 @@
 
-const DYK_SEED = 39;
+const DYK_SEED = 40;
 // League model built from the export file. Pure functions, no DOM.
 // Trades reversed within 48 hours: the later trade's adds are the earlier trade's drops, and the other way around
 function reversedTrades(txs) {
@@ -4015,6 +4015,14 @@ function wTeam(W, tm) {
     let h = "";
     if (vs.preview) h += `<p class="warn">Commissioner preview. Members see this page on Mondays only, from an export taken that day.</p>`;
     h += sec("Monday Night Vigil", `Week ${V.L.week}, before ${games ? esc(games) : "the Monday game"}. "Watch and pray." Matthew 26:41. Snapshot from ${esc(when)}.`);
+    h += `<details class="vg-info"><summary><span class="vg-i" aria-hidden="true">i</span>How the replays work</summary><div class="vg-info-b">
+<p><b>What a replay is.</b> We play out tonight's game ${VG_N.toLocaleString()} times. In each one, every player still to play gets a score drawn from his own range of possible nights. Then we add it up and see who wins.</p>
+<p><b>Where the range comes from.</b> The middle is his 2026 average in our scoring, nudged toward this week's projection. The width is how much he swings week to week, blended with how much his position swings, then widened 40% so he can still have a night he has not had yet. Running backs, receivers, tight ends, and quarterbacks get a long upside tail and a small chance of a dud. Kickers and defenses swing both ways, and a defense can go negative. A quarterback and his receivers rise and fall together.</p>
+<p><b>Is it honest?</b> We tested it on 1,751 real starter games from this season. About 1 in 100 beat what the model called a 1-in-100 night, which is what it should be. Sleeper's win odds are not used anywhere.</p>
+<p><b>The dots.</b> Each chart shows 50 of the replays, one dot each. Dots left of the line are comebacks for the trailing team. "8 of 50 Mondays" means about a 16% chance.</p>
+<p><b>The groups.</b> Still in the balance: the trailing team wins more than 1 in 100 replays. Miracle Territory: 1 in 100 or fewer. Literally Impossible: the trailing team has nobody left to play.</p>
+<p><b>Keys to victory.</b> "The path" is what the trailing team's players average in the replays he wins. The "best friend" line is the one player the leader most needs to stay quiet. Playoff odds come from What's at Stake. A lineup confession flags a starter who was on bye or listed Out while a bench player who fit that spot scored 5 or more.</p>
+</div></details>`;
     const live = V.games.filter(g => g.cat === "live"), mir = V.games.filter(g => g.cat === "miracle"), imp = V.games.filter(g => g.cat === "impossible");
     if (V.feature) h += vgCard(V, V.feature, true);
     const rest = live.filter(g => g !== V.feature);
@@ -4032,7 +4040,6 @@ function wTeam(W, tm) {
     h += mir.length ? mir.map(row).join("") : `<p class="vg-none">No games this week. Every trailing team has either a real shot or no shot at all.</p>`;
     h += sec("Literally Impossible", `"With man this is impossible." Matthew 19:26. The trailing team has nobody left to play.`);
     h += imp.length ? imp.map(row).join("") : `<p class="vg-none">None yet. Every game still has someone left to play.</p>`;
-    h += `<details class="explain"><summary>How the replays work</summary><p>No Sleeper win odds anywhere. Each player still to play gets a curve of possible nights, and Monday is replayed ${VG_N.toLocaleString()} times.</p><p>The middle of his curve is his 2026 average in our scoring, pulled toward this week's projection by three games' worth. The width is his own game-to-game swing, blended with how much players at his position swing, then widened by 40%. Real games beat narrower curves too often, so a 40-point night he has not had yet still shows up. Skill players get a right-leaning curve with a long upside tail. Kickers and defenses get a symmetric one, and defenses can go negative.</p><p>Every replay also carries a dud chance at each position's 2026 rate: an early exit or a near-zero night. Quarterbacks and their pass catchers share a team factor, so they rise and fall together. Opposing teams draw separately.</p><p>We tested this on 1,751 starter games from this season, predicting each one without it. 10.7% topped the 90th percentile, 1.8% the 97.5th, and 1.0% the 99th. A curve built from a player's own games alone missed badly: 8% of games topped what it called the 99th.</p><p>Miracle Territory: the trailing team wins in 1% or fewer of replays. Literally Impossible: the trailing team has nobody left. Playoff odds come from What's at Stake. Lineup confessions flag a starter who was on bye or listed Out, Doubtful, or on a reserve list, while a bench player who fit that spot scored 5 or more.</details>`;
     return h;
   }
   // Home: on Monday, point at the vigil first

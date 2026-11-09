@@ -463,6 +463,14 @@ main[data-view="vigil"] details.explain { text-align: left; }
 .vg-row { padding: 12px 0; border-bottom: 1px solid var(--line); }
 .vg-row p { margin: 4px 0 0; line-height: 1.4; }
 .vg-row-h { line-height: 1.3; }
+.vg-info { margin: -4px auto 14px; max-width: 62ch; text-align: center; }
+.vg-info summary { display: inline-flex; align-items: center; gap: 8px; list-style: none; cursor: pointer; font-weight: 700; font-size: .9rem; color: var(--blue); background: var(--sky-tint); border-radius: 999px; padding: 8px 16px 8px 10px; min-height: 40px; }
+.vg-info summary::-webkit-details-marker { display: none; }
+.vg-i { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--blue); color: var(--surface); font: italic 700 .85rem Georgia, serif; }
+.vg-info[open] summary { background: var(--blue); color: var(--surface); }
+.vg-info[open] .vg-i { background: var(--surface); color: var(--blue); }
+.vg-info-b { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 4px 16px; margin-top: 10px; font-size: .92rem; line-height: 1.45; }
+.vg-info-b p { margin: 10px 0; }
 .vg-none { text-align: center; color: var(--muted); margin: 4px auto 8px; max-width: 46ch; line-height: 1.45; }
 
 footer { color: var(--muted); font-size: .82rem; margin-top: 40px; border-top: 1px solid var(--line); padding-top: 12px; }
