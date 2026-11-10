@@ -30,6 +30,7 @@ The live app is the source of truth. This branch holds a backup of the source, t
   - `node checks/sermon.js sim 2026`: every week, no missing values, the two-line limit, no back-to-back repeats.
   - `node checks/views.js sim sim`: views at 360, 390, and 768 widths, light and dark, no errors or sideways scrolling.
   - `node checks/vigil.js sim sim` on fixture data (see Monday Night Vigil).
+  - `node checks/land.js sim sim` for The Promised Land.
   - `node checks/plans.js sim`, then `python3 checks/gates.py data.json`: rechecks the sermon gates and Week 8 facts from raw data.
   - Recompute any new math independently before you call it done.
   - The older test scripts (`test4` to `test11`, `pubtest`, `mt-ui`, `g2`) were not recovered. Write a new check when work touches the drop zone, multi-team trades, or Spiritual Gifts.
@@ -83,6 +84,13 @@ The commissioner sends the export JSON (or uses the drop zone), the Reddit trade
   - Lineup confession: a starter with 0 who was on bye or listed Out, Doubtful, IR, PUP, Sus, NA, DNR, or COV (not Questionable), and a bench player who already played and scored 5+ that fits the slot directly or through one flex shuffle. One per man per page.
   - Nav: the tab and a pulsing dot show on Mondays (6-slot bottom bar). The Weekly Recap (renamed from Tuesday Recap) pulses on Tuesdays. Both pulse all day, even after the page is opened (Benton's call).
   - Test data: `python3 checks/vigil_fixture.py data.json sim/data.json`, then `node checks/vigil.js sim sim` (Monday, Tuesday, Wednesday, and stale-Monday clocks; 360, 390, and 768 widths; both themes).
+- **The Promised Land (`land()`, tab `#land`, in the More sheet and top tabs; linked from the Playoff Picture):** a playoff simulator, phase 1.
+  - Engine: `playoffPicture(season, sims, forced, focus)`. `forced` maps `week:a:b` (from `pp.gKey`) to the winner's uid. A locked game still draws both scores and swaps them if the wrong team won, so points for stays realistic. Locked games count as played for the exact In and Out check. `focus` (a uid) tallies, in one pass, his playoff odds split by each game's result (`pp.focusGames`). No picks gives results identical to today's odds.
+  - Screen: team picker (defaults to "Who are you?"), big playoff %, bye, projected wins, and lid (last place) with arrows for the change from today. A 5-column league table fits a 360-wide phone for screenshots. Quick paths: wins out and loses out (that team's games), favorites and upsets (open games only), clear. Week chips with picked counts, two buttons per game with the single-game lean from the same scoring model, tap again to unlock. "Games that matter to X": the 5 open games with the biggest swing (1 point or more), each with a lock button.
+  - Picks are saved on the viewer's phone under `gb-land:<season>:<last scored week>`, so they reset when a new week is scored. No share link (Benton: a screenshot is enough).
+  - 10,000 simulations per change, run after the tap paints. About 0.2 to 0.3 seconds in the workspace.
+  - Check: `node checks/land.js sim sim` (lock and unlock, lose out, clear restores today's odds, team switch, the table fits the card, the Playoff Picture link).
+  - Later, if asked: title odds through the bracket; using the Vigil's live replays for the week in progress.
 - **Recap awards:** always 12 tiles, by `recapTiles`. Priority: top and low score, blowout, close, tough, lucky, top player, upset, bad beat, regret, the two Prophecy tiles, Asleep, bench, then fill tiles (Good and Faithful, Armor of God, Best Foot Forward, Still Small Voice, Revival Meeting).
 - **Sermon:** `sermonBook()` plans every week in order, so past weeks never change. Bank lines rotate through every option before repeating.
   - Score: percentile against league history, plus 40 for a league record, 12 for a season high or low, 4 to 10 for a streak, and 14 for a standings change.

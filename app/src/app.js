@@ -1,5 +1,5 @@
 
-const DYK_SEED = 40;
+const DYK_SEED = 41;
 // League model built from the export file. Pure functions, no DOM.
 // Trades reversed within 48 hours: the later trade's adds are the earlier trade's drops, and the other way around
 function reversedTrades(txs) {
@@ -680,7 +680,7 @@ function hotHand(season) {
 }
 
 /* ---------- Playoff odds, clinch watch, remaining schedule ---------- */
-function playoffPicture(season, sims) {
+function playoffPicture(season, sims, forced, focus) {
   sims = sims || 10000;
   const pws = season.pws, regLeft = [];
   for (let w = (season.regWeeks[season.regWeeks.length - 1] || 0) + 1; w < pws; w++) regLeft.push(w);
@@ -702,6 +702,18 @@ function playoffPicture(season, sims) {
   const sched = [];
   regLeft.forEach(w => { const rows = (season.schedule[w] || []); const byM = {}; rows.forEach(r => { (byM[r.matchup_id] = byM[r.matchup_id] || []).push(season.rosterOwner[r.roster_id]); }); Object.values(byM).forEach(p => { if (p.length === 2 && p[0] && p[1]) sched.push({ w, a: p[0], b: p[1] }); }); });
   const haveSchedule = regLeft.length > 0 && sched.length >= regLeft.length * Math.floor(N / 2) * 0.9;
+  // The Promised Land: locked results count as played, for the exact clinch check and in every simulation
+  const F = forced && Object.keys(forced).length ? forced : null, gKey = g => g.w + ":" + g.a + ":" + g.b;
+  if (F) {
+    const w2 = {}, l2 = {}; uids.forEach(u => { w2[u] = st[u].w; l2[u] = 0; });
+    sched.forEach(g => { const f = F[gKey(g)]; if (f === g.a || f === g.b) w2[f] += 1; else { l2[g.a]++; l2[g.b]++; } });
+    uids.forEach(u => {
+      const minMe = w2[u], maxMe = w2[u] + l2[u];
+      const canPass = uids.filter(o => o !== u && w2[o] + l2[o] >= minMe).length, surelyAbove = uids.filter(o => o !== u && w2[o] > maxMe).length;
+      let magic = null; for (let k = 0; k <= l2[u]; k++) { if (uids.filter(o => o !== u && w2[o] + l2[o] >= minMe + k).length < P) { magic = k; break; } }
+      status[u] = canPass < P ? "clinched" : surelyAbove >= P ? "eliminated" : "alive"; status[u + ":magic"] = magic;
+    });
+  }
   // Scoring model: each team's mean and spread, shrunk toward the league
   const scores = {}; season.teamWeeks.filter(t => t.game && t.game.kind === "regular").forEach(t => { (scores[t.uid] = scores[t.uid] || []).push(t.pts); });
   const all = Object.values(scores).flat(); const lm = all.reduce((a, b) => a + b, 0) / Math.max(1, all.length);
@@ -710,7 +722,7 @@ function playoffPicture(season, sims) {
   // Remaining strength of schedule: average opponent scoring mean, ranked
   const sos = {}; uids.forEach(u => { const opp = sched.filter(g => g.a === u || g.b === u).map(g => g.a === u ? g.b : g.a); sos[u] = opp.length ? { avg: opp.reduce((a, o) => a + model[o].mean, 0) / opp.length, n: opp.length, opps: opp } : null; });
   const sosRank = {}; uids.filter(u => sos[u]).sort((a, b) => sos[b].avg - sos[a].avg).forEach((u, i) => { sosRank[u] = i + 1; });
-  let odds = null, stakes = null;
+  let odds = null, stakes = null, ftal = null;
   if (haveSchedule) {
     let seed = 12345; const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
     const gauss = () => { let a = 0, b = 0; while (!a) a = rnd(); while (!b) b = rnd(); return Math.sqrt(-2 * Math.log(a)) * Math.cos(2 * Math.PI * b); };
@@ -720,10 +732,17 @@ function playoffPicture(season, sims) {
     const nextW = regLeft[0], nextGames = sched.filter(g => g.w === nextW);
     const cond = {}; uids.forEach(u => { cond[u] = { w: { n: 0, po: 0, last: 0 }, l: { n: 0, po: 0, last: 0 } }; });
     const wonNext = {};
+    ftal = focus ? sched.map(() => ({ an: 0, ap: 0, bn: 0, bp: 0 })) : null;
     for (let i = 0; i < sims; i++) {
       const w = {}, pf = {}; uids.forEach(u => { w[u] = st[u].w; pf[u] = st[u].pf; });
-      sched.forEach(g => { const sa = model[g.a].mean + model[g.a].sd * gauss(), sb = model[g.b].mean + model[g.b].sd * gauss(); pf[g.a] += sa; pf[g.b] += sb; if (sa > sb) w[g.a]++; else w[g.b]++; if (g.w === nextW) { wonNext[g.a] = sa > sb; wonNext[g.b] = sb >= sa; } });
+      const res = focus ? [] : null;
+      sched.forEach((g, gi) => { let sa = model[g.a].mean + model[g.a].sd * gauss(), sb = model[g.b].mean + model[g.b].sd * gauss();
+        // A locked result: keep both scores, swap them if the wrong team won, so points for stays realistic
+        if (F) { const f = F[gKey(g)]; if ((f === g.a && sb > sa) || (f === g.b && sa >= sb)) { const t = sa; sa = sb; sb = t; } }
+        if (res) res[gi] = sa > sb;
+        pf[g.a] += sa; pf[g.b] += sb; if (sa > sb) w[g.a]++; else w[g.b]++; if (g.w === nextW) { wonNext[g.a] = sa > sb; wonNext[g.b] = sb >= sa; } });
       const order = uids.slice().sort((a, b) => w[b] - w[a] || pf[b] - pf[a]);
+      if (res) { const made = order.indexOf(focus) < P; res.forEach((aw, gi) => { const c = ftal[gi]; if (aw) { c.an++; if (made) c.ap++; } else { c.bn++; if (made) c.bp++; } }); }
       order.forEach((u, k) => { if (k < P) cnt[u].po++; if (k < byes) cnt[u].bye++; if (k === 0) cnt[u].top++; if (k === N - 1) cnt[u].last++; cnt[u].wins += w[u];
         if (u in wonNext) { const b = cond[u][wonNext[u] ? "w" : "l"]; b.n++; if (k < P) b.po++; if (k === N - 1) b.last++; } });
     }
@@ -736,7 +755,8 @@ function playoffPicture(season, sims) {
       if (status[u] === "clinched") { wPo = 1; lPo = 1; } if (status[u] === "eliminated") { wPo = 0; lPo = 0; }
       stakes.cond[u] = { winPo: wPo, lossPo: lPo, winLast: fx(c.w, "last"), lossLast: fx(c.l, "last"), winShare: c.w.n / (c.w.n + c.l.n) }; });
   }
-  return { regLeft, status, odds, stakes, sos, sosRank, haveSchedule, byes: season.byes != null ? season.byes : (P === 6 ? 2 : 0), model };
+  const focusGames = odds && focus ? sched.map((g, gi) => { const c = ftal[gi]; return { g, key: gKey(g), aPo: c.an ? c.ap / c.an : null, bPo: c.bn ? c.bp / c.bn : null }; }) : null;
+  return { regLeft, status, odds, stakes, sos, sosRank, haveSchedule, byes: season.byes != null ? season.byes : (P === 6 ? 2 : 0), model, sched, gKey, focusGames };
 }
 
 
@@ -1706,8 +1726,8 @@ function wTeam(W, tm) {
   const signInt = n => (n > 0 ? "+" : n < 0 ? "−" : "") + Math.round(Math.abs(n)).toLocaleString();
   const rec = r => r.w + "-" + r.l + (r.t ? "-" + r.t : "");
   const ordinal = n => n + (["th", "st", "nd", "rd"][(n % 100 - 20) % 10] || ["th", "st", "nd", "rd"][n % 100] || "th");
-  const views = ["home", "vigil", "standings", "week", "rivals", "members", "history", "draft", "moves", "trades", "chart", "advisor", "gifts", "prophets", "work"];
-  const moreViews = ["members", "history", "draft", "moves", "rivals", "gifts", "prophets", "work"];
+  const views = ["home", "vigil", "land", "standings", "week", "rivals", "members", "history", "draft", "moves", "trades", "chart", "advisor", "gifts", "prophets", "work"];
+  const moreViews = ["land", "members", "history", "draft", "moves", "rivals", "gifts", "prophets", "work"];
   const deskViews = ["advisor", "chart", "trades"];
   const st = { model: null, year: null, week: null, rival: null, rivalB: null, rivalScope: "all", apScope: null, tradeScope: "all", withPO: false, standView: "final", member: null, goto: null, me: null, wireKind: "pickups", wireScope: "all", wireMode: "share", wireBar: "avg", values: null, tv: null, chartPos: "all", prView: "acts", gWeek: null, gView: "position", gTeam: null, gCache: {}, ppCache: {}, stakeCache: {}, dCache: {}, scaleCache: {}, prayAll: false, multi: null, mtPick: "", mtTo: "", mtSel: null, mtPair: true, mtLock: new Set(), mtRes: null, chartOpen: null, trade: { a: null, b: null, aGets: [], bGets: [] }, ideasFor: null, ideaCache: {} };
   const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} } };
@@ -2479,6 +2499,7 @@ function wTeam(W, tm) {
       s.standings.forEach(r => { h += `<tr${r.uid === st.me ? ' class="me"' : ""}><td class="team"><span class="rank">${r.rank}</span>${whoInline(r.uid, s)}</td><td>${rec(r)}</td><td class="l-al">${stTag(r.uid)}</td></tr>`; });
       h += `</tbody></table></div><p class="stakes sm"><b>Playoff odds and schedule strength are waiting on data.</b> They need the remaining schedule, which the updated export now collects. Run the export again and they turn on.</p>`;
     }
+    if (pp.odds && s === st.model.latest) h += `<div class="linkwrap"><button type="button" class="go-btn" data-go="land" data-sec="">Pick the games yourself in The Promised Land</button></div>`;
     h += `<details class="explain"><summary>How the playoff picture works</summary>${pp.odds ? `<p>Playoff odds come from 10,000 simulations of the rest of the regular season. Each team's weekly score is drawn from its own scoring so far, pulled slightly toward the league average because a few weeks is a small sample. Ties in the standings go to points for, the league's tiebreaker.</p><p>Schedule ranks each team's remaining opponents by how much they score: 1st is the toughest road left, ${ordinal(s.uids.length)} the easiest. Proj W is the average final win total across the simulations.</p>` : ""}<p>Clinched and Eliminated are exact, not simulated. Clinched means no combination of results can push the team out of the top ${s.playoffTeams}. Eliminated means at least ${s.playoffTeams} teams are already guaranteed to finish ahead.</p><p>Magic is the magic number: how many more wins guarantee a spot no matter what anyone else does. A team that ties on wins counts as a threat, because points for are not settled yet. Needs help means even winning out does not guarantee it.</p></details>`;
     return h;
   }
@@ -4049,6 +4070,92 @@ function wTeam(W, tm) {
     return `<section class="hero slim vg-tile"><p class="hero-k">Monday Night Vigil · Week ${V.L.week}</p><p class="vg-tile-t">${live ? `${live} ${live === 1 ? "game is" : "games are"} still in the balance.` : "Every game is settled or close to it."}${f ? ` Game of the night: ${esc(ownerName(f.trail.uid))} chasing ${esc(ownerName(f.lead.uid))}, down ${f1(f.gap)}.` : ""}</p><button type="button" class="go" data-go="vigil" data-sec="">Keep watch</button></section>`;
   }
 
+  /* ---------- The Promised Land: pick any games, the rest are simulated the same way as the playoff odds ---------- */
+  const LAND_SIMS = 10000;
+  const landKey = s => "gb-land:" + s.year + ":" + (s.regWeeks[s.regWeeks.length - 1] || 0);
+  function landState(s) {
+    if (!st.land || st.land.key !== landKey(s)) {
+      let picks = {}; try { picks = JSON.parse(store.get(landKey(s)) || "{}") || {}; } catch (e) { picks = {}; }
+      st.land = { key: landKey(s), picks, week: null, team: st.me || null, cache: {} };
+    }
+    return st.land;
+  }
+  const landSave = L => store.set(L.key, Object.keys(L.picks).length ? JSON.stringify(L.picks) : null);
+  // One game's lean from the same scoring model the simulation uses
+  const normCdf = z => { const t = 1 / (1 + 0.2316419 * Math.abs(z)), d = 0.3989423 * Math.exp(-z * z / 2), p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))); return z > 0 ? 1 - p : p; };
+  const leanA = (pp, g) => { const A = pp.model[g.a], B = pp.model[g.b]; return normCdf((A.mean - B.mean) / Math.sqrt(A.sd * A.sd + B.sd * B.sd)); };
+  function landRun(s, L) {
+    const team = L.team || s.uids[0], k = team + "|" + JSON.stringify(Object.entries(L.picks).sort());
+    if (!L.cache[k]) { const ks = Object.keys(L.cache); if (ks.length > 30) delete L.cache[ks[0]]; L.cache[k] = playoffPicture(s, LAND_SIMS, L.picks, team); }
+    return L.cache[k];
+  }
+  function landPreset(s, L, kind) {
+    const base = ppOf(s), me = L.team;
+    base.sched.forEach(g => {
+      const key = base.gKey(g), mine = g.a === me || g.b === me;
+      if (kind === "win" && mine) L.picks[key] = me;
+      else if (kind === "lose" && mine) L.picks[key] = g.a === me ? g.b : g.a;
+      else if ((kind === "fav" || kind === "dog") && !L.picks[key]) { const p = leanA(base, g); L.picks[key] = (p >= 0.5) === (kind === "fav") ? g.a : g.b; }
+    });
+    if (kind === "clear") L.picks = {};
+    landSave(L);
+  }
+  const dPts = (now, was) => { const d = (now - was) * 100; if (Math.abs(d) < 0.5) return `<span class="muted">–</span>`; return `<span class="${d > 0 ? "w" : "l"}">${d > 0 ? "▲" : "▼"}${Math.round(Math.abs(d))}</span>`; };
+  function land() {
+    const s = st.model.latest, base = ppOf(s);
+    if (!base.odds || !base.regLeft.length) return sec("The Promised Land", "The regular season is over. Come back next fall.");
+    const L = landState(s);
+    if (!L.team || !s.uids.includes(L.team)) L.team = st.me && s.uids.includes(st.me) ? st.me : s.standings[0].uid;
+    const pp = landRun(s, L), me = L.team, nm = ownerName(me);
+    const weeks = base.regLeft, wk = weeks.includes(L.week) ? L.week : weeks[0]; L.week = wk;
+    const nPick = Object.keys(L.picks).filter(k => base.sched.some(g => base.gKey(g) === k)).length, nAll = base.sched.length;
+    const tag = u => pp.status[u] === "clinched" ? `<span class="tag t-up">In</span>` : pp.status[u] === "eliminated" ? `<span class="tag t-down">Out</span>` : "";
+    const rec0 = u => { const r = s.standings.find(x => x.uid === u); return r ? rec(r) : ""; };
+    let h = sec("The Promised Land", `Pick any games. We play out the rest ${LAND_SIMS.toLocaleString()} times. "Be strong and courageous." Joshua 1:9.`);
+    h += `<details class="vg-info"><summary><span class="vg-i" aria-hidden="true">i</span>How the simulator works</summary><div class="vg-info-b">
+<p><b>Your picks are locked.</b> Tap a team to make him win that game. Tap again to unlock it. Every game you leave open is simulated.</p>
+<p><b>Open games.</b> Each team's weekly score is drawn from its own scoring this season, pulled a little toward the league average. That is the same model as the Playoff Picture. The percentage on each button is that model's lean for the single game.</p>
+<p><b>Tiebreaker.</b> Ties in the standings go to points for, the league's tiebreaker. A locked game still gets realistic scores, so points for keeps moving.</p>
+<p><b>In and Out.</b> These are exact, not simulated. With your picks, In means no combination of the open games can knock him out, and Out means he cannot get in.</p>
+<p><b>The arrows</b> show the change from today's odds, in percentage points. Lid odds are last place in the regular season, which puts a team on the road to the toilet bowl.</p>
+<p><b>Quick paths</b> fill games for you. Win out and Lose out set every game for the team you chose. Favorites and Upsets fill only the games you have not picked. Your picks stay on this phone until the next week is scored.</p>
+</div></details>`;
+    // Screenshot card: the chosen team, then the whole league
+    const o = pp.odds[me], b0 = base.odds[me];
+    h += `<section class="pl-shot"><div class="pl-brand"><span class="share-brand">Gambling Baptist · The Promised Land</span><span class="share-wk">${nPick ? `${nPick} of ${nAll} games picked` : "No picks yet: today's odds"}</span></div>`;
+    h += `<label class="pl-team"><span class="sr">Team</span><select id="landTeam" aria-label="Team">${s.standings.map(r => `<option value="${esc(r.uid)}"${r.uid === me ? " selected" : ""}>${esc(ownerName(r.uid))} · ${esc(rec(r))}</option>`).join("")}</select></label>`;
+    h += `<div class="pl-hero"><div><span class="pl-big num">${esc(pct(o.po, pp.status[me]))}</span><span class="pl-lab">to make the playoffs ${tag(me)}</span><span class="pl-d">Today ${esc(pct(b0.po, base.status[me]))} ${dPts(o.po, b0.po)}</span></div>`;
+    h += `<div class="pl-mini"><div><b class="num">${esc(pct(o.bye))}</b><span>Bye</span><small>${dPts(o.bye, b0.bye)}</small></div><div><b class="num">${f1(o.projW)}</b><span>Proj. wins</span><small>${(o.projW - b0.projW) >= 0.05 ? `<span class="w">+${f1(o.projW - b0.projW)}</span>` : (o.projW - b0.projW) <= -0.05 ? `<span class="l">−${f1(b0.projW - o.projW)}</span>` : `<span class="muted">–</span>`}</small></div><div><b class="num">${esc(pct(o.last))}</b><span>Lid odds</span><small>${dPts(o.last, b0.last)}</small></div></div></div>`;
+    const rows = s.uids.slice().sort((a, b) => pp.odds[b].po - pp.odds[a].po || pp.odds[b].projW - pp.odds[a].projW);
+    h += `<table class="data pl-tbl"><thead><tr><th>Team</th><th>Proj W</th><th>Playoffs</th><th>Bye</th><th>Lid</th></tr></thead><tbody>`;
+    rows.forEach((u, i) => {
+      if (i === s.playoffTeams) h += `<tr class="altar"><td colspan="5"><span>Playoff line</span></td></tr>`;
+      const x = pp.odds[u];
+      h += `<tr class="${u === me ? "me" : ""}"><td class="team"><b>${esc(ownerName(u))}</b>${tag(u)}<small>${esc(rec0(u))}</small></td><td>${f1(x.projW)}</td><td><b>${esc(pct(x.po, pp.status[u]))}</b><small>${dPts(x.po, base.odds[u].po)}</small></td><td>${esc(pct(x.bye))}</td><td>${esc(pct(x.last))}</td></tr>`;
+    });
+    h += `</tbody></table></section>`;
+    // Quick paths
+    h += `<div class="pl-paths" role="group" aria-label="Quick paths"><button type="button" data-lpre="win">${esc(nm)} wins out</button><button type="button" data-lpre="lose">${esc(nm)} loses out</button><button type="button" data-lpre="fav">Favorites win</button><button type="button" data-lpre="dog">Upsets</button><button type="button" data-lpre="clear"${nPick ? "" : " disabled"}>Clear all</button></div>`;
+    // Week picker
+    h += `<h2>Pick the games</h2><div class="chips pl-weeks" role="group" aria-label="Week">${weeks.map(w => { const gs = base.sched.filter(g => g.w === w), n = gs.filter(g => L.picks[base.gKey(g)]).length; return `<button type="button" data-lweek="${w}" aria-pressed="${w === wk}">Wk ${w}<small>${n}/${gs.length}</small></button>`; }).join("")}</div>`;
+    h += `<div class="pl-games">`;
+    base.sched.filter(g => g.w === wk).forEach(g => {
+      const key = base.gKey(g), pick = L.picks[key], pa = leanA(base, g);
+      const btn = (u, p) => `<button type="button" class="pl-side${pick === u ? " on" : pick ? " off" : ""}${u === me ? " mine" : ""}" data-lpick="${esc(key)}" data-lwho="${esc(u)}" aria-pressed="${pick === u}"><b>${esc(ownerName(u))}</b><span>${esc(rec0(u))} · ${Math.round(p * 100)}%</span></button>`;
+      h += `<div class="pl-game">${btn(g.a, pa)}<span class="pl-vs" aria-hidden="true">vs</span>${btn(g.b, 1 - pa)}</div>`;
+    });
+    h += `</div>`;
+    // Games that matter most for the chosen team, among the open ones
+    const fg = (pp.focusGames || []).filter(x => !L.picks[x.key] && x.aPo != null && x.bPo != null).map(x => ({ ...x, sw: Math.abs(x.aPo - x.bPo) })).filter(x => x.sw >= 0.01).sort((p, q) => q.sw - p.sw).slice(0, 5);
+    h += sec(`Games that matter to ${nm}`, fg.length ? "The open games that move his playoff odds most. Lock the result he needs and watch the odds move." : "No open game moves his odds by a point or more.");
+    fg.forEach(x => {
+      const g = x.g, good = x.aPo >= x.bPo ? g.a : g.b, hi = Math.max(x.aPo, x.bPo), lo = Math.min(x.aPo, x.bPo);
+      const who = g.a === me || g.b === me ? `His own game, Week ${g.w}` : `Week ${g.w}`;
+      h += `<div class="pl-matter"><div class="pl-m-h"><span class="muted">${who}</span><b>${esc(ownerName(g.a))} vs ${esc(ownerName(g.b))}</b></div><p>Root for <b>${esc(ownerName(good))}</b>: ${esc(pct(hi))} if he wins, ${esc(pct(lo))} if he loses.</p><div class="pl-m-b"><button type="button" class="go-btn" data-lpick="${esc(x.key)}" data-lwho="${esc(good)}" data-lgo="${g.w}">Lock ${esc(ownerName(good))}</button></div></div>`;
+    });
+    return h;
+  }
+
   /* ---------- Shell ---------- */
   function setSheet(open) {
     $("sheet").hidden = !open; $("scrim").hidden = !open;
@@ -4068,10 +4175,10 @@ function wTeam(W, tm) {
     document.querySelectorAll("nav.tabs a, nav.bottom a, .sheet a").forEach(a => { const hv = a.getAttribute("href").slice(1); if (hv === v || (a.dataset.desk && deskViews.includes(v))) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
     if (moreViews.includes(v)) $("moreBtn").setAttribute("aria-current", "page"); else $("moreBtn").removeAttribute("aria-current");
     setSheet(false);
-    $("seasonWrap").hidden = v === "home" || v === "vigil" || v === "chart" || v === "advisor";
+    $("seasonWrap").hidden = v === "home" || v === "vigil" || v === "land" || v === "chart" || v === "advisor";
     navMarks(v);
     const y = window.scrollY;
-    const fn = { home, vigil, standings, week, rivals, members, history, draft, moves, trades, chart, advisor, gifts, prophets, work }[v];
+    const fn = { home, vigil, land, standings, week, rivals, members, history, draft, moves, trades, chart, advisor, gifts, prophets, work }[v];
     const view = $("view"); view.dataset.view = v;
     try { view.innerHTML = fn(); }
     catch (e) { view.innerHTML = `<p class="empty">This page did not load: ${esc(e.message)}. Pick another season or refresh.</p>`; return; }
@@ -4101,6 +4208,9 @@ function wTeam(W, tm) {
     if (lastView !== v) window.scrollTo(0, 0); else window.scrollTo(0, y);
     lastView = v;
   }
+  // The Promised Land: show the tap, then run the simulation
+  function landPaint() { const v = $("view"); v.classList.add("pl-busy"); requestAnimationFrame(() => setTimeout(() => { render(); v.classList.remove("pl-busy"); }, 0)); }
+  document.addEventListener("change", e => { if (e.target && e.target.id === "landTeam" && st.land) { st.land.team = e.target.value; landPaint(); } });
   $("moreBtn").addEventListener("click", () => setSheet($("sheet").hidden));
   $("scrim").addEventListener("click", () => setSheet(false));
   document.addEventListener("keydown", e => { if (e.key === "Escape") { setSheet(false); closeCard(); } });
@@ -4122,6 +4232,9 @@ function wTeam(W, tm) {
     const p = e.target.closest("[data-tip]"); if (p) { showTip(p); return; } else tip.hidden = true;
     const b = e.target.closest("button"); if (!b) return;
     if (b.dataset.pid) { openCard(b.dataset.pid, b); return; }
+    if (b.dataset.lpick) { const L = st.land; if (!L) return; if (L.picks[b.dataset.lpick] === b.dataset.lwho && !b.dataset.lgo) delete L.picks[b.dataset.lpick]; else L.picks[b.dataset.lpick] = b.dataset.lwho; landSave(L); landPaint(); return; }
+    if (b.dataset.lweek) { st.land.week = +b.dataset.lweek; render(); return; }
+    if (b.dataset.lpre) { landPreset(st.model.latest, st.land, b.dataset.lpre); landPaint(); return; }
     if (b.dataset.go) {
       if (b.dataset.who) { st.rival = b.dataset.who; st.rivalB = null; }
       if (b.dataset.member) st.member = b.dataset.member;
@@ -4276,7 +4389,7 @@ function wTeam(W, tm) {
 
   function start(raw) {
     st.raw = raw;
-    Object.assign(st, { vigilCache: null, gCache: {}, ppCache: {}, stakeCache: {}, dCache: {}, scaleCache: {}, ideaCache: {}, mtRes: null, multi: null });
+    Object.assign(st, { land: null, vigilCache: null, gCache: {}, ppCache: {}, stakeCache: {}, dCache: {}, scaleCache: {}, ideaCache: {}, mtRes: null, multi: null });
     st.model = buildLeague(raw); st.pIdx = undefined; st.prCache = null; st.wk = undefined;
     Object.values(st.model.owners).forEach(o => { if (NICK[o.name]) { o.handle = o.name; o.name = NICK[o.name]; } });
     st.model.seasons.forEach(x => Object.keys(x.teamName).forEach(uid => { const o = st.model.owners[uid]; if (o && o.handle && x.teamName[uid] === o.handle) x.teamName[uid] = "Team " + o.name; }));

@@ -473,6 +473,55 @@ main[data-view="vigil"] details.explain { text-align: left; }
 .vg-info-b p { margin: 10px 0; }
 .vg-none { text-align: center; color: var(--muted); margin: 4px auto 8px; max-width: 46ch; line-height: 1.45; }
 
+/* The Promised Land */
+.pl-shot { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 14px 14px 6px; margin-top: 4px; position: relative; overflow: hidden; }
+.pl-shot::before { content: ""; position: absolute; inset: 0 0 auto; height: 5px; background: repeating-linear-gradient(90deg, var(--sky) 0 22px, var(--blue) 22px 30px, var(--tan) 30px 52px, var(--bg) 52px 54px); }
+.pl-brand { display: grid; justify-items: center; gap: 2px; margin-top: 6px; text-align: center; }
+table.pl-tbl { table-layout: fixed; }
+table.pl-tbl th:first-child, table.pl-tbl td:first-child { width: 34%; }
+table.pl-tbl td.team { min-width: 0; white-space: normal; }
+table.pl-tbl td small { display: block; font-size: .74rem; color: var(--muted); font-weight: 600; }
+table.pl-tbl td, table.pl-tbl th { padding-top: 7px; padding-bottom: 7px; }
+table.pl-tbl td.team .tag { margin-left: 4px; }
+.pl-team { display: block; margin: 10px 0 4px; text-align: center; }
+.pl-team select { font: inherit; font-weight: 700; color: var(--ink); background: var(--sky-tint); border: 0; border-radius: 999px; padding: 9px 14px; min-height: 44px; max-width: 100%; text-align: center; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.pl-hero { display: grid; gap: 10px; justify-items: center; text-align: center; padding: 6px 0 12px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.pl-hero > div:first-child { display: grid; justify-items: center; gap: 2px; }
+.pl-big { font-family: var(--display); font-variation-settings: "wdth" 75; font-weight: 900; font-size: 3.4rem; line-height: 1; color: var(--blue); }
+.pl-lab { font-weight: 650; }
+.pl-d { font-size: .85rem; color: var(--muted); }
+.pl-mini { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; max-width: 380px; }
+.pl-mini > div { display: grid; justify-items: center; gap: 1px; }
+.pl-mini b { font-family: var(--display); font-variation-settings: "wdth" 80; font-size: 1.35rem; font-weight: 800; }
+.pl-mini span { font-size: .78rem; font-weight: 700; color: var(--brown); }
+.pl-mini small { font-size: .78rem; }
+table.pl-tbl td, table.pl-tbl th { padding-left: 4px; padding-right: 4px; }
+.pl-paths { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 14px 0 4px; }
+.pl-paths button { font: inherit; font-weight: 650; font-size: .86rem; color: var(--brown); background: var(--tan-tint); border: 1px solid color-mix(in srgb, var(--tan) 80%, transparent); border-radius: 999px; padding: 8px 13px; min-height: 40px; cursor: pointer; }
+.pl-paths button:disabled { opacity: .45; cursor: default; }
+.pl-weeks { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 4px; overflow: visible; max-width: 520px; margin: 0 auto 6px; }
+.pl-weeks button { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; padding: 6px 2px; min-width: 0; font-size: .84rem; border-radius: 12px; }
+.pl-weeks button small { font-size: .7rem; font-weight: 600; opacity: .8; }
+.pl-games { display: grid; gap: 8px; margin-top: 6px; }
+.pl-game { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; }
+.pl-vs { font-size: .72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+.pl-side { display: grid; justify-items: center; gap: 1px; min-height: 58px; font: inherit; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 6px; cursor: pointer; min-width: 0; }
+.pl-side b { overflow-wrap: anywhere; }
+.pl-side span { font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pl-side.mine { border-color: var(--sky); }
+.pl-side.on { background: var(--blue); border-color: var(--blue); color: var(--surface); }
+.pl-side.on span { color: color-mix(in srgb, var(--surface) 80%, transparent); }
+.pl-side.off { opacity: .45; }
+.pl-matter { text-align: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.pl-m-h { display: grid; gap: 1px; }
+.pl-m-h .muted { font-size: .8rem; }
+.pl-matter p { margin: 4px 0 0; }
+.pl-m-b .go-btn { margin-top: 8px; }
+main[data-view="land"] > h2, main[data-view="land"] > .kick { text-align: center; margin-left: auto; margin-right: auto; }
+main[data-view="land"] .jump { justify-content: safe center; }
+.pl-busy .pl-shot { opacity: .55; transition: opacity .1s; }
+
 footer { color: var(--muted); font-size: .82rem; margin-top: 40px; border-top: 1px solid var(--line); padding-top: 12px; }
 @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 
@@ -648,6 +697,7 @@ body.pc-open { overflow: hidden; }
     <a href="#week">Weekly Recap</a>
     <a href="#advisor" data-desk="1">Trade Desk</a>
     <a href="#gifts">Spiritual Gifts</a>
+    <a href="#land">The Promised Land</a>
     <a href="#prophets">Prophecy Check</a>
     <a href="#work">The Laborers</a>
     <a href="#moves">Waiver Wire</a>
@@ -665,6 +715,7 @@ body.pc-open { overflow: hidden; }
 <div class="pcard" id="pcard" role="dialog" aria-modal="true" aria-labelledby="pcTitle" hidden></div>
 <div class="sheet" id="sheet" hidden>
   <p class="sheet-h">This season</p>
+  <a href="#land">The Promised Land <span>Pick the games, see the playoff odds</span></a>
   <a href="#gifts">Spiritual Gifts <span>Your team, position by position</span></a>
   <a href="#prophets">Prophecy Check <span>Projections against what happened</span></a>
   <a href="#work">The Laborers <span>Usage, target trees, backfields</span></a>
