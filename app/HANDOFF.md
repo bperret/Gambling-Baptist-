@@ -112,5 +112,5 @@ The commissioner sends the export JSON (or uses the drop zone), the Reddit trade
 
 ## Open items
 - **Thread for later:** Benton sent a long screenshot of a text thread on Nov 9 and said it is for later. It is saved at `app/inbox/2026-11-09-thread-for-later.jpg`. Ask what he wants done with it before acting.
-- **Testimonies:** live with the full Week 8 dump. Team-only notes and players off rosters are left out. Rosters come from the latest scored week, as in the app.
+- **Testimonies:** live with the Week 9 dump (87 notes, loaded Nov 10). Team-only notes and players off rosters are left out. Rosters come from the latest scored week, as in the app.
 - No 2026 trade has involved three or more teams, so multi-team scoring has only been tested on a made-up trade.
