@@ -1,5 +1,5 @@
 
-const DYK_SEED = 50;
+const DYK_SEED = 52;
 // 2026 NFL regular season, weeks 1 to 17, away@home (nflverse schedule; Rams as LAR to match Sleeper). Exodus reads opponents from here.
 const NFL26 = {"1":"NE@SEA SF@LAR CHI@CAR TB@CIN NO@DET BUF@HOU BAL@IND CLE@JAX ATL@PIT NYJ@TEN ARI@LAC MIA@LV GB@MIN WAS@PHI DAL@NYG DEN@KC","2":"DET@BUF CAR@ATL NO@BAL MIN@CHI CIN@HOU PIT@NE GB@NYJ CLE@TB PHI@TEN JAX@DEN LV@LAC SEA@ARI WAS@DAL MIA@SF IND@KC NYG@LAR","3":"ATL@GB LAC@BUF CAR@CLE NYJ@DET HOU@IND NE@JAX KC@MIA TEN@NYG CIN@PIT SEA@WAS ARI@SF MIN@TB BAL@DAL LV@NO LAR@DEN PHI@CHI","4":"PIT@CLE IND@WAS TEN@BAL NE@BUF NYJ@CHI JAX@CIN DAL@HOU ARI@NYG LAR@PHI GB@TB MIA@MIN KC@LV LAC@SEA DEN@SF DET@CAR ATL@NO","5":"TB@DAL PHI@JAX CHI@GB CIN@MIA LV@NE MIN@NO CLE@NYJ IND@PIT HOU@TEN NYG@WAS DEN@LAC DET@ARI SF@SEA BAL@ATL BUF@LAR","6":"SEA@DEN HOU@JAX CHI@ATL BAL@CLE TEN@IND NYJ@NE NO@NYG CAR@PHI PIT@TB ARI@LAR LAC@KC BUF@LV DAL@GB WAS@SF","7":"NE@CHI PIT@NO SF@ATL CIN@BAL TB@CAR NYG@HOU IND@MIN MIA@NYJ CLE@TEN DEN@ARI GB@DET LAR@LV KC@SEA DAL@PHI","8":"CAR@GB BAL@BUF TEN@CIN ARI@DAL MIN@DET IND@JAX LV@NYJ CLE@PIT ATL@TB LAC@LAR KC@DEN NE@MIA PHI@WAS CHI@SEA","9":"JAX@BAL CIN@ATL DEN@CAR DAL@IND NYJ@KC DET@MIA CLE@NO NYG@PHI LAR@WAS HOU@LAC GB@NE ARI@SEA LV@SF TB@CHI BUF@MIN","10":"WAS@NYG NE@DET KC@ATL HOU@CLE MIN@GB MIA@IND CAR@NO BUF@NYJ JAX@TEN LAR@ARI SEA@LV SF@DAL PIT@CIN LAC@BAL","11":"IND@HOU MIA@BUF BAL@CAR NO@CHI TEN@DAL TB@DET ARI@KC JAX@NYG NYJ@LAC LV@DEN PIT@PHI MIN@SF CIN@WAS","12":"GB@LAR CHI@DET PHI@DAL KC@BUF DEN@PIT NO@CIN BAL@HOU NYG@IND TEN@JAX NYJ@MIA ATL@MIN NE@LAC WAS@ARI SEA@SF LV@CLE CAR@TB","13":"KC@LAR DET@ATL JAX@CHI CIN@CLE GB@NO SF@NYG LAC@TB WAS@TEN PHI@ARI MIA@DEN CAR@MIN BUF@NE HOU@PIT DAL@SEA","14":"MIN@NE TB@BAL NO@CAR ATL@CLE TEN@DET CHI@MIA DEN@NYJ IND@PHI HOU@WAS LAC@LV KC@CIN NYG@SEA LAR@SF BUF@GB PIT@JAX","15":"SF@LAC SEA@PHI CHI@BUF CIN@CAR MIA@GB JAX@HOU CLE@NYG BAL@PIT NO@TB IND@TEN ATL@WAS NYJ@ARI DAL@LAR DEN@LV DET@MIN NE@KC","16":"HOU@PHI GB@CHI BUF@DEN LAR@SEA TB@ATL CLE@BAL CIN@IND LAC@MIA WAS@MIN ARI@NO NE@NYJ CAR@PIT TEN@LV SF@KC JAX@DAL NYG@DET","17":"BAL@CIN NO@ATL SEA@CAR IND@CLE NYG@DAL WAS@JAX KC@LAC BUF@MIA DEN@NE MIN@NYJ LAR@TB PIT@TEN LV@ARI DET@CHI PHI@SF HOU@GB"};
 // League model built from the export file. Pure functions, no DOM.
@@ -4317,6 +4317,7 @@ function wTeam(W, tm) {
       if (kind === "win" && mine) L.picks[key] = me;
       else if (kind === "lose" && mine) L.picks[key] = g.a === me ? g.b : g.a;
       else if ((kind === "fav" || kind === "dog") && !L.picks[key]) { const p = leanA(base, g); L.picks[key] = (p >= 0.5) === (kind === "fav") ? g.a : g.b; }
+      else if (kind === "rand") L.picks[key] = Math.random() < leanA(base, g) ? g.a : g.b; // every game, weighted by its odds; a new draw each press
     });
     if (kind === "clear") L.picks = {};
     landSave(L);
@@ -4339,7 +4340,7 @@ function wTeam(W, tm) {
 <p><b>Tiebreaker.</b> Ties in the standings go to points for, the league's tiebreaker. A locked game still gets realistic scores, so points for keeps moving.</p>
 <p><b>In and Out.</b> These are exact, not simulated. With your picks, In means no combination of the open games can knock him out, and Out means he cannot get in.</p>
 <p><b>The arrows</b> show the change from today's odds, in percentage points. Lid odds are last place in the regular season, which puts a team on the road to the toilet bowl.</p>
-<p><b>Quick paths</b> fill games for you. Win out and Lose out set every game for the team you chose. Favorites and Upsets fill only the games you have not picked. Your picks stay on this phone until the next week is scored.</p>
+<p><b>Quick paths</b> fill games for you. Win out and Lose out set every game for the team you chose. Favorites and Upsets fill only the games you have not picked. Randomize replaces every pick with a random result, where each game's favorite wins as often as its odds say. Press it again for a new draw. Your picks stay on this phone until the next week is scored.</p>
 </div></details>`;
     // Screenshot card: the chosen team, then the whole league
     const o = pp.odds[me], b0 = base.odds[me];
@@ -4356,7 +4357,7 @@ function wTeam(W, tm) {
     });
     h += `</tbody></table></section>`;
     // Quick paths
-    h += `<div class="pl-paths" role="group" aria-label="Quick paths"><button type="button" data-lpre="win">${esc(nm)} wins out</button><button type="button" data-lpre="lose">${esc(nm)} loses out</button><button type="button" data-lpre="fav">Favorites win</button><button type="button" data-lpre="dog">Upsets</button><button type="button" data-lpre="clear"${nPick ? "" : " disabled"}>Clear all</button></div>`;
+    h += `<div class="pl-paths" role="group" aria-label="Quick paths"><button type="button" data-lpre="win">${esc(nm)} wins out</button><button type="button" data-lpre="lose">${esc(nm)} loses out</button><button type="button" data-lpre="fav">Favorites win</button><button type="button" data-lpre="dog">Upsets</button><button type="button" data-lpre="rand" title="Picks every game at random, weighted by each game's odds">Randomize</button><button type="button" data-lpre="clear"${nPick ? "" : " disabled"}>Clear all</button></div>`;
     // Week picker
     h += `<h2>Pick the games</h2><div class="chips pl-weeks" role="group" aria-label="Week">${weeks.map(w => { const gs = base.sched.filter(g => g.w === w), n = gs.filter(g => L.picks[base.gKey(g)]).length; return `<button type="button" data-lweek="${w}" aria-pressed="${w === wk}">Wk ${w}<small>${n}/${gs.length}</small></button>`; }).join("")}</div>`;
     h += `<div class="pl-games">`;
