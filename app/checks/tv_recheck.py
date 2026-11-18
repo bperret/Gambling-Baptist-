@@ -3,7 +3,7 @@
 import json,math,re
 V=json.load(open('values.json'))['weeks'];o=json.load(open('tvdump.json'))
 norm=lambda n:re.sub(r'\s+',' ',re.sub(r'\b(jr|sr|ii|iii|iv|v)\b','',re.sub(r"[.'’\-]",'',n.lower()))).strip()
-ALIAS={'bam knight':'zonovan knight','hollywood brown':'marquise brown','chig okonkwo':'chig okonkwo'}
+ALIAS={'bam knight':'zonovan knight','hollywood brown':'marquise brown','chigoziem okonkwo':'chig okonkwo'}
 key=lambda n:(lambda k:ALIAS.get(k,k))(norm(n))
 def blend(w):
     S=w['sources'];L={k:len(s['rows']) for k,s in S.items()};R={}
