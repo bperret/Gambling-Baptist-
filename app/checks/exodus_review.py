@@ -28,3 +28,18 @@ for r in X['rows']:
             if not c: continue
             d0 = e['wmu'] - e['wmu'] / c['r']
             if abs(d0) >= 1: print(f"  {own[r['uid']]} Wk {X['pw'][k]}: {nm(e['pid'])} {'with' if c['on'] else 'without'} {nm(c['q'])} ({c['raw']:.1f} in {c['n']} games), {d0:+.1f}")
+
+print('\nTEAMMATE ADJUSTMENTS THAT LEAN ON AN INJURED TEAMMATE (no call set: counted as playing)')
+callids = set(re.findall(r'"(\d+)": \{ back', calls))
+seen = set()
+for r in X['rows']:
+    for k, lu in enumerate(r['lu']):
+        for e in lu:
+            c = e.get('ctx')
+            if not c or c['q'] in callids: continue
+            st = (I.get(c['q']) or {}).get('s')
+            if not st: continue
+            key = (e['pid'], c['q'])
+            if key in seen: continue
+            seen.add(key)
+            print(f"  {own[r['uid']]}: {nm(e['pid'])} uses {'with' if c['on'] else 'without'} {nm(c['q'])} ({st}), {(c['r']-1)*100:+.0f}%")
