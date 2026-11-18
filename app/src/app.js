@@ -1,5 +1,5 @@
 
-const DYK_SEED = 45;
+const DYK_SEED = 46;
 // 2026 NFL regular season, weeks 1 to 17, away@home (nflverse schedule; Rams as LAR to match Sleeper). Exodus reads opponents from here.
 const NFL26 = {"1":"NE@SEA SF@LAR CHI@CAR TB@CIN NO@DET BUF@HOU BAL@IND CLE@JAX ATL@PIT NYJ@TEN ARI@LAC MIA@LV GB@MIN WAS@PHI DAL@NYG DEN@KC","2":"DET@BUF CAR@ATL NO@BAL MIN@CHI CIN@HOU PIT@NE GB@NYJ CLE@TB PHI@TEN JAX@DEN LV@LAC SEA@ARI WAS@DAL MIA@SF IND@KC NYG@LAR","3":"ATL@GB LAC@BUF CAR@CLE NYJ@DET HOU@IND NE@JAX KC@MIA TEN@NYG CIN@PIT SEA@WAS ARI@SF MIN@TB BAL@DAL LV@NO LAR@DEN PHI@CHI","4":"PIT@CLE IND@WAS TEN@BAL NE@BUF NYJ@CHI JAX@CIN DAL@HOU ARI@NYG LAR@PHI GB@TB MIA@MIN KC@LV LAC@SEA DEN@SF DET@CAR ATL@NO","5":"TB@DAL PHI@JAX CHI@GB CIN@MIA LV@NE MIN@NO CLE@NYJ IND@PIT HOU@TEN NYG@WAS DEN@LAC DET@ARI SF@SEA BAL@ATL BUF@LAR","6":"SEA@DEN HOU@JAX CHI@ATL BAL@CLE TEN@IND NYJ@NE NO@NYG CAR@PHI PIT@TB ARI@LAR LAC@KC BUF@LV DAL@GB WAS@SF","7":"NE@CHI PIT@NO SF@ATL CIN@BAL TB@CAR NYG@HOU IND@MIN MIA@NYJ CLE@TEN DEN@ARI GB@DET LAR@LV KC@SEA DAL@PHI","8":"CAR@GB BAL@BUF TEN@CIN ARI@DAL MIN@DET IND@JAX LV@NYJ CLE@PIT ATL@TB LAC@LAR KC@DEN NE@MIA PHI@WAS CHI@SEA","9":"JAX@BAL CIN@ATL DEN@CAR DAL@IND NYJ@KC DET@MIA CLE@NO NYG@PHI LAR@WAS HOU@LAC GB@NE ARI@SEA LV@SF TB@CHI BUF@MIN","10":"WAS@NYG NE@DET KC@ATL HOU@CLE MIN@GB MIA@IND CAR@NO BUF@NYJ JAX@TEN LAR@ARI SEA@LV SF@DAL PIT@CIN LAC@BAL","11":"IND@HOU MIA@BUF BAL@CAR NO@CHI TEN@DAL TB@DET ARI@KC JAX@NYG NYJ@LAC LV@DEN PIT@PHI MIN@SF CIN@WAS","12":"GB@LAR CHI@DET PHI@DAL KC@BUF DEN@PIT NO@CIN BAL@HOU NYG@IND TEN@JAX NYJ@MIA ATL@MIN NE@LAC WAS@ARI SEA@SF LV@CLE CAR@TB","13":"KC@LAR DET@ATL JAX@CHI CIN@CLE GB@NO SF@NYG LAC@TB WAS@TEN PHI@ARI MIA@DEN CAR@MIN BUF@NE HOU@PIT DAL@SEA","14":"MIN@NE TB@BAL NO@CAR ATL@CLE TEN@DET CHI@MIA DEN@NYJ IND@PHI HOU@WAS LAC@LV KC@CIN NYG@SEA LAR@SF BUF@GB PIT@JAX","15":"SF@LAC SEA@PHI CHI@BUF CIN@CAR MIA@GB JAX@HOU CLE@NYG BAL@PIT NO@TB IND@TEN ATL@WAS NYJ@ARI DAL@LAR DEN@LV DET@MIN NE@KC","16":"HOU@PHI GB@CHI BUF@DEN LAR@SEA TB@ATL CLE@BAL CIN@IND LAC@MIA WAS@MIN ARI@NO NE@NYJ CAR@PIT TEN@LV SF@KC JAX@DAL NYG@DET","17":"BAL@CIN NO@ATL SEA@CAR IND@CLE NYG@DAL WAS@JAX KC@LAC BUF@MIA DEN@NE MIN@NYJ LAR@TB PIT@TEN LV@ARI DET@CHI PHI@SF HOU@GB"};
 // League model built from the export file. Pure functions, no DOM.
@@ -3795,6 +3795,12 @@ function wTeam(W, tm) {
   // Player mean: his 2026 games in league scoring, leaning on Workload points (3 games' weight) and this week's projection (2 games' weight).
   // Each playoff week: that mean times the opponent's points allowed to his position (pulled to average by 8 games, held to 0.8 to 1.2),
   // then 25% Sleeper's projection for that week when the export has one. Players on the prayer list count as healthy, with a wider spread.
+  // Commissioner's calls (Benton): expected return week for key injured players. back 99 = out for the season.
+  // Everyone else on the prayer list counts as healthy. Reviewed with Benton at every trade value update.
+  const EX_CALLS = { "2026": { "9493": { back: 16, set: "Nov 17" }, "4881": { back: 99, set: "Nov 17" } } };
+  // Teammate context (Benton, Nov 17): a teammate with 18%+ of his team's targets and carries (or a starting QB with a call) changes a player's number,
+  // using the player's 2026 average with or without him, pulled to his season average by 4 games, held to 0.6x to 1.6x.
+  const EX_SHARE = 0.18, EX_KC = 4, EX_CTX = [0.6, 1.6];
   const EX_KW = 3, EX_KP = 2, EX_KD = 8, EX_CLIP = [0.8, 1.2], EX_SOFT = 1.06, EX_HARD = 0.94, EX_FUT = 0.25, EX_HURT = 1.25, EX_N = 10000;
   const nflWeek = w => { const g = NFL26[w]; if (!g) return null; const m = {}; g.split(" ").forEach(x => { const [a, h] = x.split("@"); m[a] = { opp: h, home: false }; m[h] = { opp: a, home: true }; }); return m; };
 
@@ -3833,6 +3839,35 @@ function wTeam(W, tm) {
         const cv = L.map(x => sdv(x.g) / x.m).sort((p, q) => p - q), all = L.flatMap(x => x.g.map(v => ({ v, m: x.m })));
         prior[ps] = { cv: cv[Math.floor(cv.length / 2)], dud: all.filter(e => e.v < 0.25 * e.m).length / all.length, avg: mean(L.map(x => x.m)) }; }); }
     const W = wkOf(), fut = proj.future || {};
+    const calls = EX_CALLS[String(s.year)] || {};
+    const availIn = (pid, w) => { const c = calls[pid]; return !c || w >= c.back; };
+    // Teammate context: team totals of targets plus carries (quarterbacks left out), each man's share in his games
+    const UF = (proj.usage && proj.usage.fields) || [], fi = k => UF.indexOf(k), iT = fi("tgt"), iA = fi("att");
+    const tTot = {}, onTeam = {};
+    wk.forEach(w => Object.entries(U[w] || {}).forEach(([pid, r]) => { if (!r || !r[0] || !(r[1] > 0)) return; const t = r[0]; (onTeam[t] = onTeam[t] || new Set()).add(pid); if (posOf(pid) === "QB") return; const k = t + "|" + w; tTot[k] = (tTot[k] || 0) + (+r[iT] || 0) + (+r[iA] || 0); }));
+    const playedFor = (pid, t) => wk.filter(w => { const r = (U[w] || {})[pid]; return r && r[1] > 0 && r[0] === t; });
+    const shareOf = (pid, t) => { let a = 0, b = 0; playedFor(pid, t).forEach(w => { const r = U[w][pid]; a += (+r[iT] || 0) + (+r[iA] || 0); b += tTot[t + "|" + w] || 0; }); return b ? a / b : 0; };
+    const ctxCache = {};
+    const ctxOf = pid => {
+      if (ctxCache[pid]) return ctxCache[pid];
+      const ps = posOf(pid), t = teamNow(pid), out = [];
+      if (!["QB", "RB", "WR", "TE"].includes(ps) || !t) return (ctxCache[pid] = out);
+      const mine = playedFor(pid, t); if (mine.length < 3) return (ctxCache[pid] = out);
+      const pts = w => (A[w] || {})[pid] || 0, avg = mean(mine.map(pts));
+      if (!(avg > 0)) return (ctxCache[pid] = out);
+      [...(onTeam[t] || [])].forEach(q => {
+        if (q === pid || teamNow(q) !== t) return;
+        const qp = posOf(q);
+        if (qp === "QB") { if (!calls[q]) return; } else if (!["RB", "WR", "TE"].includes(qp) || shareOf(q, t) < EX_SHARE) return;
+        const qs = new Set(playedFor(q, t)), wi = mine.filter(w => qs.has(w)), wo = mine.filter(w => !qs.has(w));
+        if (wi.length < 2 || wo.length < 2) return;
+        const sh = L => (L.reduce((a, w) => a + pts(w), 0) + EX_KC * avg) / (L.length + EX_KC);
+        out.push({ q, withN: wi.length, woN: wo.length, withRaw: mean(wi.map(pts)), woRaw: mean(wo.map(pts)), withM: sh(wi), woM: sh(wo), avg });
+      });
+      return (ctxCache[pid] = out);
+    };
+    // The biggest teammate effect for one playoff week
+    const ctxFor = (pid, w) => { let best = null; ctxOf(pid).forEach(c => { const on = availIn(c.q, w), m = on ? c.withM : c.woM, r = Math.min(EX_CTX[1], Math.max(EX_CTX[0], m / c.avg)); if (!best || Math.abs(Math.log(r)) > Math.abs(Math.log(best.r))) best = { q: c.q, on, r, n: on ? c.withN : c.woN, raw: on ? c.withRaw : c.woRaw, m }; }); return best; };
     const curves = {};
     const curveOf = pid => {
       if (curves[pid]) return curves[pid];
@@ -3848,18 +3883,20 @@ function wTeam(W, tm) {
       const skew = ps !== "K" && ps !== "DEF", cv = sd / mu, ls = skew ? Math.sqrt(Math.log(1 + cv * cv)) : 0;
       const team = teamNow(pid), weeks = pw.map(w => {
         const g = team && sch[w] && sch[w][team];
+        if (!availIn(pid, w)) return { w, mu: 0, out: true, call: calls[pid] };
         if (!g) return { w, mu: 0, bye: true };
+        const ctx = ctxFor(pid, w), cr = ctx ? ctx.r : 1;
         const fx = factor(g.opp, ps), fp = fut[w] && fut[w][pid] > 0 ? fut[w][pid] : null;
-        const base = mu * fx.f, m = fp != null ? (1 - EX_FUT) * base + EX_FUT * fp : base, flat = fp != null ? (1 - EX_FUT) * mu + EX_FUT * fp : mu;
-        return { w, mu: m, flat, opp: g.opp, home: g.home, f: fx.f, fp };
+        const base = mu * cr * fx.f, m = fp != null ? (1 - EX_FUT) * base + EX_FUT * fp : base, flat = fp != null ? (1 - EX_FUT) * mu * cr + EX_FUT * fp : mu * cr;
+        return { w, mu: m, flat, opp: g.opp, home: g.home, f: fx.f, fp, ctx };
       });
-      return (curves[pid] = { pid, pos: ps, team, n, mu, own, wx, pj, cv, ls, skew, dud: skew ? pr0.dud : 0, rho: VG_RHO[ps], hurt, q: inj === "Questionable", thin, weeks });
+      return (curves[pid] = { pid, pos: ps, team, n, mu, own, wx, pj, cv, ls, skew, dud: skew ? pr0.dud : 0, rho: VG_RHO[ps], hurt, q: inj === "Questionable", thin, call: calls[pid] || null, weeks });
     };
 
     // Best legal lineup for each team in each playoff week
     const slotName = i => { const e = s.slotElig[i]; return e.size === 1 ? [...e][0] : "FLEX"; };
     const lineupOf = (uid, k) => {
-      const avail = (s.currentRosters[uid] || []).map(curveOf).filter(Boolean).sort((a, b) => b.weeks[k].mu - a.weeks[k].mu), used = new Set(), out = [];
+      const avail = (s.currentRosters[uid] || []).map(curveOf).filter(c => c && !c.weeks[k].out).sort((a, b) => b.weeks[k].mu - a.weeks[k].mu), used = new Set(), out = [];
       s.slotOrder.forEach(i => { const pk = avail.find(c => !used.has(c.pid) && s.slotElig[i].has(c.pos)); if (pk) { used.add(pk.pid); out.push({ i, slot: slotName(i), c: pk, x: pk.weeks[k] }); } });
       return out.sort((a, b) => a.i - b.i);
     };
@@ -3868,7 +3905,8 @@ function wTeam(W, tm) {
       const tot = lu.map(l => l.reduce((a, e) => a + e.x.mu, 0)), flat = lu.map(l => l.reduce((a, e) => a + (e.x.bye ? 0 : e.x.flat), 0));
       const hurtSet = new Set(lu.flat().filter(e => e.c.hurt).map(e => e.c.pid));
       const hurtPts = mean(lu.map(l => l.filter(e => e.c.hurt).reduce((a, e) => a + e.x.mu, 0)));
-      return { uid, lu, tot, str: mean(tot), slate: mean(tot) - mean(flat), hurt: hurtSet.size, hurtPts };
+      const sat = (s.currentRosters[uid] || []).map(curveOf).filter(c => c && c.call).map(c => ({ c, weeks: pw.filter((w, k) => c.weeks[k].out) })).filter(x => x.weeks.length);
+      return { uid, lu, tot, str: mean(tot), slate: mean(tot) - mean(flat), hurt: hurtSet.size, hurtPts, sat };
     });
 
     // Title odds: playoff fields from the Playoff Picture's simulations, then the bracket, scored from each lineup's curves
@@ -3909,16 +3947,16 @@ function wTeam(W, tm) {
     const oPct = v => (v >= 0.995 ? (v === 1 ? "In" : ">99%") : v < 0.005 ? (v > 0 ? "<1%" : "0%") : Math.round(v * 100) + "%");
     const wcls = k => (k <= 3 ? "w" : k > N - 3 ? "l" : "");
     let h = sec("Exodus", `Playoff power rankings: who is built for Weeks ${X.pw[0]}, ${X.pw[1]}, and ${X.pw[2]}, the road to the championship.`);
-    h += `<details class="explain ex-info"><summary>How Exodus works</summary><p>Each team's best starting lineup for each playoff week, from today's roster. A player's number starts with his 2026 average in league scoring, first downs included. For backs, receivers, and tight ends it leans on his Workload points, and for everyone on this week's Sleeper projection. Then it moves with that week's NFL opponent: how many points that defense has given up to his position this year, pulled toward average because ten games is a small sample.${X.hasFut ? " Sleeper's own projection for that week counts for a quarter." : ""}</p><p>Players on the prayer list (Out, IR, Doubtful, and the rest) count as healthy, because whoever holds them is counting on them for the playoffs. Their numbers carry a wider spread, and the team carries a tag. For those numbers to hold, the man has to get healthy first.</p>${X.sim ? `<p>Title odds: 10,000 seasons from the Playoff Picture decide the six seeds. Seeds 1 and 2 sit out Week ${X.pw[0]}. Then each playoff game is played out from every starter's own range of scores, with the same Monday Night Vigil curves, so upsets happen as often as they should. One game is a coin with a weight on it, so read these as odds, not a verdict.</p>` : ""}</details>`;
+    h += `<details class="explain ex-info"><summary>How Exodus works</summary><p>Each team's best starting lineup for each playoff week, from today's roster. A player's number starts with his 2026 average in league scoring, first downs included. For backs, receivers, and tight ends it leans on his Workload points, and for everyone on this week's Sleeper projection. Then it moves with that week's NFL opponent: how many points that defense has given up to his position this year, pulled toward average because ten games is a small sample.${X.hasFut ? " Sleeper's own projection for that week counts for a quarter." : ""}</p><p>Players on the prayer list (Out, IR, Doubtful, and the rest) count as healthy, because whoever holds them is counting on them for the playoffs. Their numbers carry a wider spread, and the team carries a tag. For those numbers to hold, the man has to get healthy first. The exception is a commissioner's call: when a return week is set for a key player, he sits until that week and the next man up starts.</p><p>Teammates matter too. When a teammate with a big role (18% or more of his team's targets and carries, or a starting quarterback ruled out) will be on or off the field in a playoff week, a player's number uses his 2026 average with or without that teammate, pulled toward his season average because the samples are small.</p>${X.sim ? `<p>Title odds: 10,000 seasons from the Playoff Picture decide the six seeds. Seeds 1 and 2 sit out Week ${X.pw[0]}. Then each playoff game is played out from every starter's own range of scores, with the same Monday Night Vigil curves, so upsets happen as often as they should. One game is a coin with a weight on it, so read these as odds, not a verdict.</p>` : ""}</details>`;
     if (X.sim) h += `<div class="chips" role="group" aria-label="Exodus order"><button data-exsort="title" aria-pressed="${by === "title"}">Title odds</button><button data-exsort="str" aria-pressed="${by === "str"}">Playoff strength</button></div>`;
     h += `<div class="scroll"><table class="data ex-t" data-hide="${X.sim ? "5,6,7,8" : "4"}"><thead><tr><th>Team</th>${X.pw.map(w => `<th>Wk ${w}</th>`).join("")}${X.sim ? "<th>Title</th>" : ""}<th>Slate</th>${X.sim ? "<th>Final</th><th>Playoffs</th><th>Bye</th>" : ""}</tr></thead><tbody>`;
     rows.forEach((r, i) => {
-      const tag = r.hurt ? ` <span class="inj" title="Starters who must get healthy">${r.hurt} hurt</span>` : "";
+      const tag = (r.hurt ? ` <span class="inj" title="Starters who must get healthy">${r.hurt} hurt</span>` : "") + (r.sat.length ? ` <span class="inj" title="${esc(r.sat.map(x => `${X.nameOf(x.c.pid)} out until Week ${x.c.call.back} (commissioner's call)`).join("; "))}">${r.sat.length} ${r.sat.length === 1 ? "call" : "calls"}</span>` : "");
       const byeLikely = r.sim && r.sim.bye >= 0.5;
       h += `<tr${r.uid === st.me ? ' class="me"' : ""}><td class="team"><span class="rank">${i + 1}</span>${whoInline(r.uid, s)}${tag}</td>${r.tot.map((t, k) => `<td class="${k === 0 && byeLikely ? "muted" : wcls(r.rk[k])}"${k === 0 && byeLikely ? ' title="Likely bye week"' : ""}>${f1(t)}</td>`).join("")}${X.sim ? `<td><b>${tPct(r)}</b></td>` : ""}<td class="${r.slate >= 1 ? "w" : r.slate <= -1 ? "l" : ""}">${sign(r.slate)}</td>${X.sim ? `<td>${r.sim.status === "eliminated" ? "Out" : oPct(r.sim.fin)}</td><td>${r.sim.status === "clinched" ? "In" : r.sim.status === "eliminated" ? "Out" : oPct(r.sim.po)}</td><td>${r.sim.status === "eliminated" ? "Out" : oPct(r.sim.bye)}</td>` : ""}</tr>`;
     });
     h += `</tbody></table></div>`;
-    h += `<p class="fine">Week columns are projected starting lineup points, in league scoring. Green is a top 3 lineup that week, red a bottom 3. A grey Week ${X.pw[0]} means the team more likely than not has a bye. Slate is what the NFL matchups add or take away across the three weeks, per week. "Hurt" counts starters on the prayer list.</p>`;
+    h += `<p class="fine">Week columns are projected starting lineup points, in league scoring. Green is a top 3 lineup that week, red a bottom 3. A grey Week ${X.pw[0]} means the team more likely than not has a bye. Slate is what the NFL matchups add or take away across the three weeks, per week. "Hurt" counts starters on the prayer list. "Call" marks a player the commissioner has ruled out for set weeks.</p>`;
 
     // One team, week by week
     const ids = X.rows.map(r => r.uid), team = ids.includes(st.exTeam) ? st.exTeam : ids.includes(st.me) ? st.me : rows[0].uid, R = X.rows.find(r => r.uid === team);
@@ -3926,15 +3964,16 @@ function wTeam(W, tm) {
     h += `<h3>Lineup for the playoffs</h3><label class="pl-team"><span class="sr">Team</span><select id="exTeam" aria-label="Team">${rows.map(r => `<option value="${esc(r.uid)}"${r.uid === team ? " selected" : ""}>${esc(ownerName(r.uid))} · ${esc(teamIn(r.uid, s))}</option>`).join("")}</select></label>`;
     h += `<div class="chips" role="group" aria-label="Playoff week">${X.pw.map((x, j) => `<button data-exwk="${j}" aria-pressed="${j === k}">Week ${x}</button>`).join("")}</div>`;
     const hp = R.lu[k].filter(e => e.c.hurt).reduce((a, e) => a + e.x.mu, 0);
-    h += `<p class="takeaway">${esc(ownerName(team))}: ${f1(R.tot[k])} projected in Week ${w}, ${ordinal(R.rk[k])} of ${N}.${hp > 0 ? ` ${f1(hp)} of it rides on players who must get healthy first.` : ""}${R.sim && R.sim.bye >= 0.5 && k === 0 ? " Likely a bye week for this team." : ""}</p>`;
+    h += `<p class="takeaway">${esc(ownerName(team))}: ${f1(R.tot[k])} projected in Week ${w}, ${ordinal(R.rk[k])} of ${N}.${hp > 0 ? ` ${f1(hp)} of it rides on players who must get healthy first.` : ""}${R.sim && R.sim.bye >= 0.5 && k === 0 ? " Likely a bye week for this team." : ""}${R.sat.filter(x => x.weeks.includes(w)).map(x => ` ${X.nameOf(x.c.pid)} sits: ${x.c.call.back > 17 ? "out for the season" : `out until Week ${x.c.call.back}`} (commissioner's call).`).join("")}</p>`;
     h += `<div class="list">${R.lu[k].map(e => {
       const c = e.c, x = e.x;
       const draw = x.bye ? `<span class="l">no game</span>` : x.f >= EX_SOFT ? `<span class="w">soft draw</span>` : x.f <= EX_HARD ? `<span class="l">tough draw</span>` : "even draw";
       const flag = c.hurt ? ` <span class="inj" title="Must get healthy first">${esc(c.hurt === "Sus" ? "Susp" : c.hurt)}</span>` : c.q ? ` <span class="inj" title="Sleeper injury status">Q</span>` : "";
-      const note = c.hurt ? `<div class="muted sm ex-need">Counted as healthy. He has to be back by Week ${w}.</div>` : c.thin ? `<div class="muted sm">No 2026 games yet, so this is a rough guess.</div>` : "";
+      const ctx = x.ctx && Math.abs(x.ctx.r - 1) >= 0.05 ? `<div class="muted sm ex-ctx">${x.ctx.on ? "With" : "Without"} ${esc(X.nameOf(x.ctx.q))}: ${f1(x.ctx.raw)} a game in ${x.ctx.n} games, so <span class="${x.ctx.r > 1 ? "w" : "l"}">${x.ctx.r > 1 ? "up" : "down"} ${Math.round(Math.abs(x.ctx.r - 1) * 100)}%</span> this week.</div>` : "";
+      const note = (c.call ? `<div class="muted sm ex-need">Commissioner's call: back Week ${c.call.back}.</div>` : c.hurt ? `<div class="muted sm ex-need">Counted as healthy. He has to be back by Week ${w}.</div>` : c.thin ? `<div class="muted sm">No 2026 games yet, so this is a rough guess.</div>` : "") + ctx;
       return `<div class="row"><div><span class="rank ex-slot">${esc(e.slot === "FLEX" ? "FLX" : e.slot)}</span><b>${pn(c.pid, X.nameOf(c.pid))}</b>${flag}<div class="muted sm">${e.slot === "FLEX" ? esc(c.pos) + " · " : ""}${x.bye ? esc(c.team) : `${esc(c.team)} ${x.home ? "vs" : "at"} ${esc(x.opp)}`} · ${draw}</div>${note}</div><div class="r">${f1(x.mu)}<small>usual ${f1(c.mu)}</small></div></div>`;
     }).join("")}</div>`;
-    h += `<p class="fine">Usual is his 2026 number before the matchup. A soft draw means that defense gives up at least 6% more than average to his position, a tough draw at least 6% less.</p>`;
+    h += `<p class="fine">Usual is his 2026 number before the matchup and teammate changes. A soft draw means that defense gives up at least 6% more than average to his position, a tough draw at least 6% less.</p>`;
     return h;
   }
 

@@ -42,6 +42,43 @@ bad = 0
 for ps in POS:
     if abs(avg[ps] - X['posAvg'][ps]) > 1e-6: bad += 1; print('posAvg', ps, avg[ps], X['posAvg'][ps])
 pw = X['pw']; checked = 0
+import re, math
+calls = json.loads(re.sub(r'(\w+):', r'"\1":', re.search(r'const EX_CALLS = (\{.*?\});', src).group(1).replace('"2026"', '"S2026"')))['S2026']
+avail = lambda pid, w: pid not in calls or w >= calls[pid]['back']
+UF = pr['usage']['fields']; iT = UF.index('tgt'); iA = UF.index('att')
+tt = {}; on = {}
+for w in wk:
+    for pid, r in U[str(w)].items():
+        if not r or not r[0] or not (r[1] or 0) > 0: continue
+        on.setdefault(r[0], set()).add(pid)
+        if pos(pid) == 'QB': continue
+        tt[(r[0], w)] = tt.get((r[0], w), 0) + (r[iT] or 0) + (r[iA] or 0)
+pf = lambda pid, t: [w for w in wk if (U[str(w)].get(pid) or [0, 0])[1] and U[str(w)][pid][0] == t]
+def share(pid, t):
+    a = b = 0
+    for w in pf(pid, t): r = U[str(w)][pid]; a += (r[iT] or 0) + (r[iA] or 0); b += tt.get((t, w), 0)
+    return a / b if b else 0
+cur = lambda pid: pid if pos(pid) == 'DEF' else P[pid][2]
+def ctx(pid, w):
+    ps = pos(pid); t = cur(pid)
+    if ps not in ('QB', 'RB', 'WR', 'TE'): return 1
+    mine = pf(pid, t)
+    if len(mine) < 3: return 1
+    pts = lambda x: A[str(x)].get(pid, 0); avg = S.mean(pts(x) for x in mine)
+    if avg <= 0: return 1
+    best = 1
+    for q in on.get(t, ()):
+        if q == pid or cur(q) != t: continue
+        if pos(q) == 'QB':
+            if q not in calls: continue
+        elif pos(q) not in ('RB', 'WR', 'TE') or share(q, t) < 0.18: continue
+        qs = set(pf(q, t)); wi = [x for x in mine if x in qs]; wo = [x for x in mine if x not in qs]
+        if len(wi) < 2 or len(wo) < 2: continue
+        L = wi if avail(q, w) else wo
+        m = (sum(pts(x) for x in L) + 4 * avg) / (len(L) + 4); r = min(1.6, max(0.6, m / avg))
+        if abs(math.log(r)) > abs(math.log(best)): best = r
+    return best
+
 for r in X['rows']:
     for k, lu in enumerate(r['lu']):
         S_ = wkmap(pw[k]); tot = 0
@@ -55,7 +92,10 @@ for r in X['rows']:
             if pj and pj > 0: num += 2 * pj; den += 2
             mu = max(0.5, num / den) if den else None
             t = pid if ps == 'DEF' else P[pid][2]
-            wm = mu * fac(S_[t][0], ps) if mu is not None else e['wmu']
+            if not avail(pid, pw[k]): bad += 1; print('called-out player in lineup', pid)
+            base = mu * ctx(pid, pw[k]) * fac(S_[t][0], ps) if mu is not None else e['wmu']
+            fp = (pr.get('future') or {}).get(str(pw[k]), {}).get(pid)
+            wm = (0.75 * base + 0.25 * fp) if (fp and fp > 0 and mu is not None) else base
             if mu is not None and abs(mu - e['mu']) > 1e-6: bad += 1; print('mu', pid, mu, e['mu'])
             if abs(wm - e['wmu']) > 1e-6: bad += 1; print('wmu', pid, wm, e['wmu'])
             if S_[t][0] != e['opp']: bad += 1; print('opp', pid)
