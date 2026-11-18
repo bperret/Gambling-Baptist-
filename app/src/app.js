@@ -1,5 +1,5 @@
 
-const DYK_SEED = 49;
+const DYK_SEED = 50;
 // 2026 NFL regular season, weeks 1 to 17, away@home (nflverse schedule; Rams as LAR to match Sleeper). Exodus reads opponents from here.
 const NFL26 = {"1":"NE@SEA SF@LAR CHI@CAR TB@CIN NO@DET BUF@HOU BAL@IND CLE@JAX ATL@PIT NYJ@TEN ARI@LAC MIA@LV GB@MIN WAS@PHI DAL@NYG DEN@KC","2":"DET@BUF CAR@ATL NO@BAL MIN@CHI CIN@HOU PIT@NE GB@NYJ CLE@TB PHI@TEN JAX@DEN LV@LAC SEA@ARI WAS@DAL MIA@SF IND@KC NYG@LAR","3":"ATL@GB LAC@BUF CAR@CLE NYJ@DET HOU@IND NE@JAX KC@MIA TEN@NYG CIN@PIT SEA@WAS ARI@SF MIN@TB BAL@DAL LV@NO LAR@DEN PHI@CHI","4":"PIT@CLE IND@WAS TEN@BAL NE@BUF NYJ@CHI JAX@CIN DAL@HOU ARI@NYG LAR@PHI GB@TB MIA@MIN KC@LV LAC@SEA DEN@SF DET@CAR ATL@NO","5":"TB@DAL PHI@JAX CHI@GB CIN@MIA LV@NE MIN@NO CLE@NYJ IND@PIT HOU@TEN NYG@WAS DEN@LAC DET@ARI SF@SEA BAL@ATL BUF@LAR","6":"SEA@DEN HOU@JAX CHI@ATL BAL@CLE TEN@IND NYJ@NE NO@NYG CAR@PHI PIT@TB ARI@LAR LAC@KC BUF@LV DAL@GB WAS@SF","7":"NE@CHI PIT@NO SF@ATL CIN@BAL TB@CAR NYG@HOU IND@MIN MIA@NYJ CLE@TEN DEN@ARI GB@DET LAR@LV KC@SEA DAL@PHI","8":"CAR@GB BAL@BUF TEN@CIN ARI@DAL MIN@DET IND@JAX LV@NYJ CLE@PIT ATL@TB LAC@LAR KC@DEN NE@MIA PHI@WAS CHI@SEA","9":"JAX@BAL CIN@ATL DEN@CAR DAL@IND NYJ@KC DET@MIA CLE@NO NYG@PHI LAR@WAS HOU@LAC GB@NE ARI@SEA LV@SF TB@CHI BUF@MIN","10":"WAS@NYG NE@DET KC@ATL HOU@CLE MIN@GB MIA@IND CAR@NO BUF@NYJ JAX@TEN LAR@ARI SEA@LV SF@DAL PIT@CIN LAC@BAL","11":"IND@HOU MIA@BUF BAL@CAR NO@CHI TEN@DAL TB@DET ARI@KC JAX@NYG NYJ@LAC LV@DEN PIT@PHI MIN@SF CIN@WAS","12":"GB@LAR CHI@DET PHI@DAL KC@BUF DEN@PIT NO@CIN BAL@HOU NYG@IND TEN@JAX NYJ@MIA ATL@MIN NE@LAC WAS@ARI SEA@SF LV@CLE CAR@TB","13":"KC@LAR DET@ATL JAX@CHI CIN@CLE GB@NO SF@NYG LAC@TB WAS@TEN PHI@ARI MIA@DEN CAR@MIN BUF@NE HOU@PIT DAL@SEA","14":"MIN@NE TB@BAL NO@CAR ATL@CLE TEN@DET CHI@MIA DEN@NYJ IND@PHI HOU@WAS LAC@LV KC@CIN NYG@SEA LAR@SF BUF@GB PIT@JAX","15":"SF@LAC SEA@PHI CHI@BUF CIN@CAR MIA@GB JAX@HOU CLE@NYG BAL@PIT NO@TB IND@TEN ATL@WAS NYJ@ARI DAL@LAR DEN@LV DET@MIN NE@KC","16":"HOU@PHI GB@CHI BUF@DEN LAR@SEA TB@ATL CLE@BAL CIN@IND LAC@MIA WAS@MIN ARI@NO NE@NYJ CAR@PIT TEN@LV SF@KC JAX@DAL NYG@DET","17":"BAL@CIN NO@ATL SEA@CAR IND@CLE NYG@DAL WAS@JAX KC@LAC BUF@MIA DEN@NE MIN@NYJ LAR@TB PIT@TEN LV@ARI DET@CHI PHI@SF HOU@GB"};
 // League model built from the export file. Pure functions, no DOM.
@@ -421,13 +421,15 @@ function tradeLedger(model, year) {
   const rows = {};
   model.seasons.forEach(s => {
     if (year && s.year !== year) return;
+    const lastScored = Math.max(0, ...s.teamWeeks.filter(x => x.pts != null).map(x => x.week));
     s.moves.filter(m => m.type === "trade").forEach(t => t.sides.forEach(sd => {
+      const fresh = t.week > lastScored; // no games since the trade: count it, but it cannot be anyone's best or worst yet
       const x = rows[sd.uid] || (rows[sd.uid] = { uid: sd.uid, trades: 0, pin: 0, pout: 0, net: 0, poIn: 0, rings: 0, ringYears: [], best: null, worst: null });
       x.trades++; x.pin += sd.total; x.pout += sd.given; x.net += sd.net; x.poIn += sd.poIn;
       if (sd.ring) { x.rings++; if (!x.ringYears.includes(s.year)) x.ringYears.push(s.year); }
       const rec = { year: s.year, week: t.week, net: sd.net, got: sd.got.map(g => g.name), gave: sd.gave.map(g => g.name) };
-      if (!x.best || sd.net > x.best.net) x.best = rec;
-      if (!x.worst || sd.net < x.worst.net) x.worst = rec;
+      if (!fresh && (!x.best || sd.net > x.best.net)) x.best = rec;
+      if (!fresh && (!x.worst || sd.net < x.worst.net)) x.worst = rec;
     }));
   });
   return Object.values(rows).map(x => ({ ...x, poIn: Math.round(x.poIn * 10) / 10, pin: Math.round(x.pin * 10) / 10, pout: Math.round(x.pout * 10) / 10, net: Math.round(x.net * 10) / 10 }))
@@ -2947,14 +2949,16 @@ function wTeam(W, tm) {
     if (TS) h += scalesBlock(s, TS);
     h += sec("Potluck Swaps", `Every ${esc(s.year)} trade, newest first.${TS ? " Each one weighed two ways: points so far, and value today." : ""}`);
     if (!trades.length) h += `<p class="empty">No trades this season.</p>`;
+    const lastScored = Math.max(0, ...s.teamWeeks.filter(x => x.pts != null).map(x => x.week));
     trades.slice().reverse().forEach(t => {
-      h += `<div class="trade"><div class="muted sm">Week ${t.week}</div><div class="sides">`;
+      const fresh = t.week > lastScored; // no games scored since the trade yet
+      h += `<div class="trade"><div class="muted sm">Week ${t.week}${fresh ? " · no games played since this trade yet" : ""}</div><div class="sides">`;
       t.sides.forEach(x => {
-        h += `<div class="side"><b>${esc(teamIn(x.uid, s))}</b> <span class="muted">received</span><ul>${x.got.map(p => `<li>${pn(p.pid, p.name)} <span class="muted">${esc(p.pos)}, ${f1(p.pts)}</span></li>`).join("")}${x.picks.map(p => `<li class="muted">${esc(p)} pick</li>`).join("")}</ul><div class="${x.net > 0 ? "w" : x.net < 0 ? "l" : "muted"} sm">${f1(x.total)} in, ${f1(x.given)} out, net ${sign(x.net)}</div>${(() => { const ix = pIdx(); if (!ix || ix.season !== s || !x.got.length) return ""; let g = 0, n = 0; x.got.forEach(p => { const L = playerLine(ix, p.pid, { from: t.week }); g += L.sum.gap; n += L.sum.n; }); return n ? `<div class="sm ${g > 0 ? "w" : g < 0 ? "l" : "muted"}">Since the trade: ${sign(g)} against projection <span class="muted">(${n} player-${n === 1 ? "week" : "weeks"}, wherever they played)</span></div>` : ""; })()}${x.ring ? '<span class="tag gold flush">Title trade</span>' : ""}</div>`;
+        h += `<div class="side"><b>${esc(teamIn(x.uid, s))}</b> <span class="muted">received</span><ul>${x.got.map(p => `<li>${pn(p.pid, p.name)} <span class="muted">${esc(p.pos)}${fresh ? "" : `, ${f1(p.pts)}`}</span></li>`).join("")}${x.picks.map(p => `<li class="muted">${esc(p)} pick</li>`).join("")}</ul>${fresh ? `<div class="muted sm">Points start counting after its first game.</div>` : `<div class="${x.net > 0 ? "w" : x.net < 0 ? "l" : "muted"} sm">${f1(x.total)} in, ${f1(x.given)} out, net ${sign(x.net)}</div>`}${(() => { const ix = pIdx(); if (!ix || ix.season !== s || !x.got.length) return ""; let g = 0, n = 0; x.got.forEach(p => { const L = playerLine(ix, p.pid, { from: t.week }); g += L.sum.gap; n += L.sum.n; }); return n ? `<div class="sm ${g > 0 ? "w" : g < 0 ? "l" : "muted"}">Since the trade: ${sign(g)} against projection <span class="muted">(${n} player-${n === 1 ? "week" : "weeks"}, wherever they played)</span></div>` : ""; })()}${x.ring ? '<span class="tag gold flush">Title trade</span>' : ""}</div>`;
       });
       h += `</div>`;
       const r = TS && TS.rows.find(x => x.t === t);
-      if (r) h += scaleLine(r, s);
+      if (r) h += scaleLine(Object.assign({}, r, { fresh }), s);
       h += `</div>`;
     });
     return h;
@@ -2973,7 +2977,7 @@ function wTeam(W, tm) {
     const last = st.tv.hist.length > 1 ? r.trend[r.trend.length - 2] : null;
     const moved = last && last.label !== r.label ? ` Was ${esc(last.label.toLowerCase())} in week ${last.week}.` : "";
     const then = r.then && r.then.week !== st.tv.week.week ? ` When made: ${esc(r.then.label.toLowerCase())}, ${Math.round(Math.abs(r.then.diff) * 100)}% apart.` : "";
-    return `<p class="scale-line"><span><b>Points so far:</b> ${ptsTxt}.</span> <span><b>Value today:</b> ${now}.${then}${moved}</span></p>`;
+    return `<p class="scale-line"><span><b>Points so far:</b> ${r.fresh ? "no games yet" : ptsTxt}.</span> <span><b>Value today:</b> ${now}.${then}${moved}</span></p>`;
   }
   function scalesBlock(s, TS) {
     let h = sec("Weighed on the Scales", `"You have been weighed on the scales and found wanting." Daniel 5:27. Every ${esc(s.year)} trade judged again with this week's trade values, wherever the players are now.`);
