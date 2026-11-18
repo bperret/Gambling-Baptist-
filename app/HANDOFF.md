@@ -92,6 +92,18 @@ The commissioner sends the export JSON (or uses the drop zone), the Reddit trade
   - 10,000 simulations per change, run after the tap paints. About 0.2 to 0.3 seconds in the workspace.
   - Check: `node checks/land.js sim sim` (lock and unlock, lose out, clear restores today's odds, team switch, the table fits the card, the Playoff Picture link).
   - Later, if asked: title odds through the bracket; using the Vigil's live replays for the week in progress.
+- **The Pew Chart (`pews()`, tab `#pews`, after the Bulletin in the top tabs, first in the More sheet; added Nov 17):** Exodus, then Pulpit Power Rankings (Acts and Revelation), then Everyone Plays Everyone. The last two moved off the Bulletin, which now links here.
+- **Exodus (`exodusData()`, `exodusBlock()`):** playoff power rankings for weeks `pws` to `pws + 2` (15 to 17). Latest season only, until the first playoff week is scored.
+  - NFL opponents come from `NFL26` at the top of `src/app.js` (2026 regular season from nflverse games.csv, `LA` stored as `LAR`). It matched Sleeper's Week 11 games and every usage week. No byes in Weeks 15 to 17.
+  - Player mean: 2026 games in league scoring, plus Workload points at 3 games' weight (RB, WR, TE, when the fit is ok), plus this week's Sleeper projection at 2 games' weight (only when above 0). No data at all: half the position's starter average, flagged.
+  - Matchup factor: what each position scored against that defense per game this season over the league average, pulled to 1 by 8 games, held to 0.8 to 1.2. Soft draw 1.06 or more, tough 0.94 or less. DEF is scored against the opposing offense.
+  - Sleeper's projection for that playoff week counts 25% when the export has it (`projections.future`, added to the export page Nov 17).
+  - **Benton's rule (Nov 17): injured players count as healthy.** Whoever holds them expects them back. Out, Doubtful, IR, PUP, Sus, NA, DNR, COV get a 1.25x wider spread, a tag, and the note that they must be back by that week. Team rows show "N hurt."
+  - Lineups: best legal lineup each week from current rosters by week mean, K and DEF included.
+  - Title odds: 10,000 playoff fields from `playoffPicture(..., {orders: true})`, bracket 3v6 and 4v5 in Week 15, 1 vs the 4/5 winner and 2 vs the 3/6 winner in Week 16, final in Week 17. Scores use the Vigil curves (lognormal plus dud, team factor per NFL team per week). Six-team playoffs only; otherwise strength only.
+  - Table: Wk 15, 16, 17 (top 3 green, bottom 3 red, Week 15 grey when bye odds are 50% or more), Title, plus Slate, Final, Playoffs, Bye behind "Show all stats." Sort chips: Title odds, Playoff strength. Team picker and week chips show the lineup with opponent, draw, and usual vs that week.
+  - Home tile "Exodus": best title odds and strongest lineup.
+  - Checks: `node checks/pews.js sim sim` (page, controls, Bulletin no longer has the moved sections; writes `sim/exodus.json`), then `python3 checks/exodus_recheck.py data.json sim/exodus.json` (recomputes factors, means, opponents, totals, and odds sums from raw data).
 - **Recap awards:** always 12 tiles, by `recapTiles`. Priority: top and low score, blowout, close, tough, lucky, top player, upset, bad beat, regret, the two Prophecy tiles, Asleep, bench, then fill tiles (Good and Faithful, Armor of God, Best Foot Forward, Still Small Voice, Revival Meeting).
 - **Sermon:** `sermonBook()` plans every week in order, so past weeks never change. Bank lines rotate through every option before repeating.
   - Score: percentile against league history, plus 40 for a league record, 12 for a season high or low, 4 to 10 for a streak, and 14 for a standings change.

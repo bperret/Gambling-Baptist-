@@ -1,5 +1,7 @@
 
-const DYK_SEED = 44;
+const DYK_SEED = 45;
+// 2026 NFL regular season, weeks 1 to 17, away@home (nflverse schedule; Rams as LAR to match Sleeper). Exodus reads opponents from here.
+const NFL26 = {"1":"NE@SEA SF@LAR CHI@CAR TB@CIN NO@DET BUF@HOU BAL@IND CLE@JAX ATL@PIT NYJ@TEN ARI@LAC MIA@LV GB@MIN WAS@PHI DAL@NYG DEN@KC","2":"DET@BUF CAR@ATL NO@BAL MIN@CHI CIN@HOU PIT@NE GB@NYJ CLE@TB PHI@TEN JAX@DEN LV@LAC SEA@ARI WAS@DAL MIA@SF IND@KC NYG@LAR","3":"ATL@GB LAC@BUF CAR@CLE NYJ@DET HOU@IND NE@JAX KC@MIA TEN@NYG CIN@PIT SEA@WAS ARI@SF MIN@TB BAL@DAL LV@NO LAR@DEN PHI@CHI","4":"PIT@CLE IND@WAS TEN@BAL NE@BUF NYJ@CHI JAX@CIN DAL@HOU ARI@NYG LAR@PHI GB@TB MIA@MIN KC@LV LAC@SEA DEN@SF DET@CAR ATL@NO","5":"TB@DAL PHI@JAX CHI@GB CIN@MIA LV@NE MIN@NO CLE@NYJ IND@PIT HOU@TEN NYG@WAS DEN@LAC DET@ARI SF@SEA BAL@ATL BUF@LAR","6":"SEA@DEN HOU@JAX CHI@ATL BAL@CLE TEN@IND NYJ@NE NO@NYG CAR@PHI PIT@TB ARI@LAR LAC@KC BUF@LV DAL@GB WAS@SF","7":"NE@CHI PIT@NO SF@ATL CIN@BAL TB@CAR NYG@HOU IND@MIN MIA@NYJ CLE@TEN DEN@ARI GB@DET LAR@LV KC@SEA DAL@PHI","8":"CAR@GB BAL@BUF TEN@CIN ARI@DAL MIN@DET IND@JAX LV@NYJ CLE@PIT ATL@TB LAC@LAR KC@DEN NE@MIA PHI@WAS CHI@SEA","9":"JAX@BAL CIN@ATL DEN@CAR DAL@IND NYJ@KC DET@MIA CLE@NO NYG@PHI LAR@WAS HOU@LAC GB@NE ARI@SEA LV@SF TB@CHI BUF@MIN","10":"WAS@NYG NE@DET KC@ATL HOU@CLE MIN@GB MIA@IND CAR@NO BUF@NYJ JAX@TEN LAR@ARI SEA@LV SF@DAL PIT@CIN LAC@BAL","11":"IND@HOU MIA@BUF BAL@CAR NO@CHI TEN@DAL TB@DET ARI@KC JAX@NYG NYJ@LAC LV@DEN PIT@PHI MIN@SF CIN@WAS","12":"GB@LAR CHI@DET PHI@DAL KC@BUF DEN@PIT NO@CIN BAL@HOU NYG@IND TEN@JAX NYJ@MIA ATL@MIN NE@LAC WAS@ARI SEA@SF LV@CLE CAR@TB","13":"KC@LAR DET@ATL JAX@CHI CIN@CLE GB@NO SF@NYG LAC@TB WAS@TEN PHI@ARI MIA@DEN CAR@MIN BUF@NE HOU@PIT DAL@SEA","14":"MIN@NE TB@BAL NO@CAR ATL@CLE TEN@DET CHI@MIA DEN@NYJ IND@PHI HOU@WAS LAC@LV KC@CIN NYG@SEA LAR@SF BUF@GB PIT@JAX","15":"SF@LAC SEA@PHI CHI@BUF CIN@CAR MIA@GB JAX@HOU CLE@NYG BAL@PIT NO@TB IND@TEN ATL@WAS NYJ@ARI DAL@LAR DEN@LV DET@MIN NE@KC","16":"HOU@PHI GB@CHI BUF@DEN LAR@SEA TB@ATL CLE@BAL CIN@IND LAC@MIA WAS@MIN ARI@NO NE@NYJ CAR@PIT TEN@LV SF@KC JAX@DAL NYG@DET","17":"BAL@CIN NO@ATL SEA@CAR IND@CLE NYG@DAL WAS@JAX KC@LAC BUF@MIA DEN@NE MIN@NYJ LAR@TB PIT@TEN LV@ARI DET@CHI PHI@SF HOU@GB"};
 // League model built from the export file. Pure functions, no DOM.
 // Trades reversed within 48 hours: the later trade's adds are the earlier trade's drops, and the other way around
 function reversedTrades(txs) {
@@ -680,7 +682,9 @@ function hotHand(season) {
 }
 
 /* ---------- Playoff odds, clinch watch, remaining schedule ---------- */
-function playoffPicture(season, sims, forced, focus) {
+function playoffPicture(season, sims, forced, focus, opts) {
+  // opts.orders: also keep each simulation's playoff field, seeds in order (Exodus)
+  const keepOrders = !!(opts && opts.orders), orders = keepOrders ? [] : null;
   sims = sims || 10000;
   const pws = season.pws, regLeft = [];
   for (let w = (season.regWeeks[season.regWeeks.length - 1] || 0) + 1; w < pws; w++) regLeft.push(w);
@@ -742,6 +746,7 @@ function playoffPicture(season, sims, forced, focus) {
         if (res) res[gi] = sa > sb;
         pf[g.a] += sa; pf[g.b] += sb; if (sa > sb) w[g.a]++; else w[g.b]++; if (g.w === nextW) { wonNext[g.a] = sa > sb; wonNext[g.b] = sb >= sa; } });
       const order = uids.slice().sort((a, b) => w[b] - w[a] || pf[b] - pf[a]);
+      if (orders) orders.push(order.slice(0, P));
       if (res) { const made = order.indexOf(focus) < P; res.forEach((aw, gi) => { const c = ftal[gi]; if (aw) { c.an++; if (made) c.ap++; } else { c.bn++; if (made) c.bp++; } }); }
       order.forEach((u, k) => { if (k < P) cnt[u].po++; if (k < byes) cnt[u].bye++; if (k === 0) cnt[u].top++; if (k === N - 1) cnt[u].last++; cnt[u].wins += w[u];
         if (u in wonNext) { const b = cond[u][wonNext[u] ? "w" : "l"]; b.n++; if (k < P) b.po++; if (k === N - 1) b.last++; } });
@@ -756,7 +761,7 @@ function playoffPicture(season, sims, forced, focus) {
       stakes.cond[u] = { winPo: wPo, lossPo: lPo, winLast: fx(c.w, "last"), lossLast: fx(c.l, "last"), winShare: c.w.n / (c.w.n + c.l.n) }; });
   }
   const focusGames = odds && focus ? sched.map((g, gi) => { const c = ftal[gi]; return { g, key: gKey(g), aPo: c.an ? c.ap / c.an : null, bPo: c.bn ? c.bp / c.bn : null }; }) : null;
-  return { regLeft, status, odds, stakes, sos, sosRank, haveSchedule, byes: season.byes != null ? season.byes : (P === 6 ? 2 : 0), model, sched, gKey, focusGames };
+  return { regLeft, status, odds, stakes, sos, sosRank, haveSchedule, byes: season.byes != null ? season.byes : (P === 6 ? 2 : 0), model, sched, gKey, focusGames, orders };
 }
 
 
@@ -1726,8 +1731,8 @@ function wTeam(W, tm) {
   const signInt = n => (n > 0 ? "+" : n < 0 ? "−" : "") + Math.round(Math.abs(n)).toLocaleString();
   const rec = r => r.w + "-" + r.l + (r.t ? "-" + r.t : "");
   const ordinal = n => n + (["th", "st", "nd", "rd"][(n % 100 - 20) % 10] || ["th", "st", "nd", "rd"][n % 100] || "th");
-  const views = ["home", "vigil", "land", "standings", "week", "rivals", "members", "history", "draft", "moves", "trades", "chart", "advisor", "gifts", "prophets", "work"];
-  const moreViews = ["land", "members", "history", "draft", "moves", "rivals", "gifts", "prophets", "work"];
+  const views = ["home", "vigil", "land", "standings", "pews", "week", "rivals", "members", "history", "draft", "moves", "trades", "chart", "advisor", "gifts", "prophets", "work"];
+  const moreViews = ["pews", "land", "members", "history", "draft", "moves", "rivals", "gifts", "prophets", "work"];
   const deskViews = ["advisor", "chart", "trades"];
   const st = { model: null, year: null, week: null, rival: null, rivalB: null, rivalScope: "all", apScope: null, tradeScope: "all", withPO: false, standView: "final", member: null, goto: null, me: null, wireKind: "pickups", wireScope: "all", wireMode: "share", wireBar: "avg", values: null, tv: null, chartPos: "all", prView: "acts", gWeek: null, gView: "position", gTeam: null, gCache: {}, ppCache: {}, stakeCache: {}, dCache: {}, scaleCache: {}, prayAll: false, multi: null, mtPick: "", mtTo: "", mtSel: null, mtPair: true, mtLock: new Set(), mtRes: null, chartOpen: null, trade: { a: null, b: null, aGets: [], bGets: [] }, ideasFor: null, ideaCache: {} };
   const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} } };
@@ -2229,17 +2234,18 @@ function wTeam(W, tm) {
       h += `<div class="cols two">`;
       h += `<div><h3>Trophy race</h3><div class="list">${pr.slice(0, 3).map((r, i) => row(r, i + 1)).join("")}</div></div>`;
       h += `<div><h3>Lid watch</h3><div class="list">${pr.slice(-3).map((r, i) => row(r, pr.length - 2 + i)).join("")}</div></div></div>`;
-      h += `<p class="fine">${pp.odds ? "Ranked by playoff odds from the Playoff Picture on the Bulletin." : "Ranked by the Pulpit Power Rankings on the Bulletin."}</p>`;
+      h += `<p class="fine">${pp.odds ? "Ranked by playoff odds from the Playoff Picture on the Bulletin." : "Ranked by the Pulpit Power Rankings on the Pew Chart."}</p>`;
     }
 
     // Only here
     h += sec("The stuff Sleeper won't tell you", "Three seasons of league data, run through the numbers. Tap any card to dig in.");
     // Cards sort into "This season" and "All time" by title
-    const SEASON_TILES = new Set(["Schedule help", "Walk a Mile in His Schedule", "Coaching %", "Spiritual gifts", "Trade chart", "Prophecy check", "The laborers"]);
+    const SEASON_TILES = new Set(["Schedule help", "Walk a Mile in His Schedule", "Coaching %", "Spiritual gifts", "Trade chart", "Prophecy check", "The laborers", "Exodus"]);
     const bucket = { season: [], all: [] };
     const tile = (view, section, title, fact, extra) => { bucket[SEASON_TILES.has(title) ? "season" : "all"].push(`${goBtn(view, section, extra)}<span class="tt">${title}</span><span class="tf">${fact}</span><span class="tc" aria-hidden="true">›</span></button>`); return ""; };
     const byLuck = s.standings.slice().sort((a, b) => b.luck - a.luck);
-    if (byLuck.length > 1) h += tile("standings", "Everyone Plays Everyone", "Schedule help", `${esc(ownerName(byLuck[0].uid))}'s schedule has handed him ${sign(byLuck[0].luck)} wins his points did not earn. ${esc(ownerName(byLuck[byLuck.length - 1].uid))}'s has cost him ${f1(Math.abs(byLuck[byLuck.length - 1].luck))}.`);
+    if (byLuck.length > 1) h += tile("pews", "Everyone Plays Everyone", "Schedule help", `${esc(ownerName(byLuck[0].uid))}'s schedule has handed him ${sign(byLuck[0].luck)} wins his points did not earn. ${esc(ownerName(byLuck[byLuck.length - 1].uid))}'s has cost him ${f1(Math.abs(byLuck[byLuck.length - 1].luck))}.`);
+    { const X = s === st.model.latest ? exodusData() : null; if (X && X.sim) { const t = X.rows.slice().sort((a, b) => b.sim.title - a.sim.title)[0], g = X.rows.slice().sort((a, b) => b.str - a.str)[0]; h += tile("pews", "Exodus", "Exodus", `${esc(ownerName(t.uid))} has the best title odds, ${Math.round(t.sim.title * 100)}%.${g.uid !== t.uid ? ` ${esc(ownerName(g.uid))} has the strongest lineup for Weeks ${X.pw[0]} to ${X.pw[2]}.` : ` He also has the strongest lineup for Weeks ${X.pw[0]} to ${X.pw[2]}.`}`); } }
     let swing = null;
     if (s.regWeeks.length) s.uids.forEach(u => { const sw = scheduleSwap(s, u); const own = sw.find(x => x.own); const best = sw.filter(x => !x.own)[0]; if (own && best && (!swing || best.w - own.w > swing.d)) swing = { u, own, best, d: best.w - own.w }; });
     if (swing && swing.d > 0) h += tile("rivals", "Walk a Mile in His Schedule", "Walk a Mile in His Schedule", `${esc(ownerName(swing.u))} is ${rec(swing.own)}. With ${esc(ownerName(swing.best.uid))}'s schedule he would be ${rec(swing.best)}.`, ` data-who="${esc(swing.u)}"`);
@@ -2402,8 +2408,7 @@ function wTeam(W, tm) {
     }
     if (!s.complete && s.regWeeks.length) h += pictureBlock(s);
     if (!s.complete && s.regWeeks.length) h += stakesBlock(s);
-    if (!s.complete && s.regWeeks.length) h += powerBlock(s);
-    h += allPlayBlock(s);
+    h += `<div class="linkwrap"><button type="button" class="go-btn" data-go="pews" data-sec="">Power rankings and Everyone Plays Everyone are on the Pew Chart</button></div>`;
     h += reportBlock(s);
     const recs = seasonRecords(s, st.withPO);
     h += sec("Mountaintops and Valleys", `${esc(s.year)} ${st.withPO ? "regular season and postseason" : "regular season"}`) + (s.playoffUids.size ? poChips() : "");
@@ -3785,6 +3790,164 @@ function wTeam(W, tm) {
   const VG_FALLBACK = { QB: { cv: 0.45, dud: 0.043, avg: 18.8 }, RB: { cv: 0.55, dud: 0.042, avg: 13.9 }, WR: { cv: 0.59, dud: 0.069, avg: 12.5 }, TE: { cv: 0.59, dud: 0.104, avg: 11.5 }, K: { cv: 0.55, dud: 0, avg: 8.6 }, DEF: { cv: 0.82, dud: 0, avg: 7.3 } };
   const dayKey = d => { const x = new Date(d); return x.getFullYear() + "-" + (x.getMonth() + 1) + "-" + x.getDate(); };
   // Open on the viewer's Monday, and only for an export taken that same day. The commissioner can preview any day.
+
+  /* ---------- Exodus: playoff power rankings for the three fantasy playoff weeks ---------- */
+  // Player mean: his 2026 games in league scoring, leaning on Workload points (3 games' weight) and this week's projection (2 games' weight).
+  // Each playoff week: that mean times the opponent's points allowed to his position (pulled to average by 8 games, held to 0.8 to 1.2),
+  // then 25% Sleeper's projection for that week when the export has one. Players on the prayer list count as healthy, with a wider spread.
+  const EX_KW = 3, EX_KP = 2, EX_KD = 8, EX_CLIP = [0.8, 1.2], EX_SOFT = 1.06, EX_HARD = 0.94, EX_FUT = 0.25, EX_HURT = 1.25, EX_N = 10000;
+  const nflWeek = w => { const g = NFL26[w]; if (!g) return null; const m = {}; g.split(" ").forEach(x => { const [a, h] = x.split("@"); m[a] = { opp: h, home: false }; m[h] = { opp: a, home: true }; }); return m; };
+
+  function exodusData() {
+    if (st.exCache !== undefined) return st.exCache;
+    const M = st.model, s = M.latest, proj = M.projections;
+    const pw = [s.pws, s.pws + 1, s.pws + 2], lastW = s.regWeeks[s.regWeeks.length - 1] || 0;
+    if (s.complete || !proj || String(proj.season) !== String(s.year) || !proj.act || !s.regWeeks.length || lastW >= s.pws || !NFL26[pw[2]]) return (st.exCache = null);
+    const P = M.players || {}, A = proj.act, U = (proj.usage && proj.usage.weeks) || {}, INJ = M.injuries || {};
+    const posOf = pid => { const p = String((P[pid] || [])[1] || "").toUpperCase(); return p === "FB" ? "RB" : p; };
+    const teamNow = pid => (posOf(pid) === "DEF" ? pid : (P[pid] || [])[2] || "");
+    const nameOf = pid => (posOf(pid) === "DEF" ? nfl(pid) + " defense" : (P[pid] || [pid])[0]);
+    const wk = Object.keys(A).map(Number).filter(w => w <= lastW && NFL26[w]).sort((a, b) => a - b);
+    const sch = {}; wk.concat(pw).forEach(w => { sch[w] = nflWeek(w); });
+    const played = {}; Object.entries(U).forEach(([w, rows]) => Object.values(rows).forEach(r => { if (r && r[0]) (played[r[0]] = played[r[0]] || new Set()).add(+w); }));
+    const tmAt = (pid, w) => { const ps = posOf(pid); if (ps === "K" || ps === "DEF") { const t = teamNow(pid); return played[t] && played[t].has(w) ? t : null; } const u = (U[w] || {})[pid]; return u && u[1] > 0 ? u[0] : null; };
+    const mean = x => x.reduce((p, q) => p + q, 0) / x.length;
+    const sdv = x => { const m = mean(x); return Math.sqrt(x.reduce((p, q) => p + (q - m) ** 2, 0) / (x.length - 1)); };
+
+    // Points allowed: for each defense and position, what that position scored against it each week
+    const allow = {};
+    wk.forEach(w => {
+      const S = sch[w], tot = {};
+      Object.entries(A[w] || {}).forEach(([pid, v]) => { const ps = posOf(pid); if (!VG_POS.includes(ps)) return; const t = tmAt(pid, w); if (!t || !S[t]) return; const k = S[t].opp + "|" + ps; tot[k] = (tot[k] || 0) + v; });
+      Object.keys(S).forEach(t => { if (!played[t] || !played[t].has(w)) return; const o = S[t].opp; VG_POS.forEach(ps => { const a0 = (allow[o] = allow[o] || {}); (a0[ps] = a0[ps] || []).push(tot[o + "|" + ps] || 0); }); });
+    });
+    const posAvg = {}; VG_POS.forEach(ps => { const all = Object.values(allow).flatMap(a0 => a0[ps] || []); posAvg[ps] = all.length ? mean(all) : 0; });
+    const factor = (o, ps) => { const x = allow[o] && allow[o][ps]; if (!x || !x.length || !posAvg[ps]) return { f: 1, n: 0, raw: 1 }; const raw = mean(x) / posAvg[ps], n = x.length; return { f: Math.min(EX_CLIP[1], Math.max(EX_CLIP[0], 1 + (raw - 1) * n / (n + EX_KD))), n, raw }; };
+
+    // Each player's 2026 games and position spreads (same measures as the Monday Night Vigil)
+    const gamesOf = pid => { const out = []; wk.forEach(w => { const a = A[w] || {}, ps = posOf(pid); if (ps === "K" || ps === "DEF") { if (tmAt(pid, w)) out.push(a[pid] || 0); } else { const u = (U[w] || {})[pid]; if (u && u[1] > 0) out.push(a[pid] || 0); } }); return out; };
+    const prior = {};
+    { const seen = new Set(); wk.forEach(w => Object.keys(A[w] || {}).forEach(p => seen.add(p))); const by = {};
+      seen.forEach(pid => { const ps = posOf(pid); if (!VG_POS.includes(ps)) return; const g = gamesOf(pid); if (g.length < 4) return; const m = mean(g); if (m < (ps === "K" || ps === "DEF" ? 5 : 7)) return; (by[ps] = by[ps] || []).push({ g, m }); });
+      VG_POS.forEach(ps => { const L = by[ps] || []; if (L.length < 5) { prior[ps] = VG_FALLBACK[ps]; return; }
+        const cv = L.map(x => sdv(x.g) / x.m).sort((p, q) => p - q), all = L.flatMap(x => x.g.map(v => ({ v, m: x.m })));
+        prior[ps] = { cv: cv[Math.floor(cv.length / 2)], dud: all.filter(e => e.v < 0.25 * e.m).length / all.length, avg: mean(L.map(x => x.m)) }; }); }
+    const W = wkOf(), fut = proj.future || {};
+    const curves = {};
+    const curveOf = pid => {
+      if (curves[pid]) return curves[pid];
+      const ps = posOf(pid); if (!VG_POS.includes(ps)) return (curves[pid] = null);
+      const pr0 = prior[ps], v = gamesOf(pid), n = v.length, own = n ? mean(v) : 0;
+      const wx = ["RB", "WR", "TE"].includes(ps) && W && W.ok && W.players[pid] && W.players[pid].g >= 1 && W.players[pid].wpg != null ? W.players[pid].wpg : null;
+      const pj = proj.pts && proj.pts[pid] > 0 ? proj.pts[pid] : null;  // zero means Sleeper does not expect him this week, so it is left out
+      let num = n * own, den = n; if (wx != null) { num += EX_KW * wx; den += EX_KW; } if (pj != null) { num += EX_KP * pj; den += EX_KP; }
+      const thin = den === 0, mu = Math.max(0.5, thin ? pr0.avg * 0.5 : num / den);
+      const inj = INJ[pid] && INJ[pid].s, hurt = VG_SAT.includes(inj) ? inj : null;
+      const sp = pr0.cv * mu, so = n > 1 ? sdv(v) : sp;
+      const sd = Math.sqrt((n * so * so + VG_KS * sp * sp) / (n + VG_KS)) * VG_WIDEN * (hurt ? EX_HURT : 1);
+      const skew = ps !== "K" && ps !== "DEF", cv = sd / mu, ls = skew ? Math.sqrt(Math.log(1 + cv * cv)) : 0;
+      const team = teamNow(pid), weeks = pw.map(w => {
+        const g = team && sch[w] && sch[w][team];
+        if (!g) return { w, mu: 0, bye: true };
+        const fx = factor(g.opp, ps), fp = fut[w] && fut[w][pid] > 0 ? fut[w][pid] : null;
+        const base = mu * fx.f, m = fp != null ? (1 - EX_FUT) * base + EX_FUT * fp : base, flat = fp != null ? (1 - EX_FUT) * mu + EX_FUT * fp : mu;
+        return { w, mu: m, flat, opp: g.opp, home: g.home, f: fx.f, fp };
+      });
+      return (curves[pid] = { pid, pos: ps, team, n, mu, own, wx, pj, cv, ls, skew, dud: skew ? pr0.dud : 0, rho: VG_RHO[ps], hurt, q: inj === "Questionable", thin, weeks });
+    };
+
+    // Best legal lineup for each team in each playoff week
+    const slotName = i => { const e = s.slotElig[i]; return e.size === 1 ? [...e][0] : "FLEX"; };
+    const lineupOf = (uid, k) => {
+      const avail = (s.currentRosters[uid] || []).map(curveOf).filter(Boolean).sort((a, b) => b.weeks[k].mu - a.weeks[k].mu), used = new Set(), out = [];
+      s.slotOrder.forEach(i => { const pk = avail.find(c => !used.has(c.pid) && s.slotElig[i].has(c.pos)); if (pk) { used.add(pk.pid); out.push({ i, slot: slotName(i), c: pk, x: pk.weeks[k] }); } });
+      return out.sort((a, b) => a.i - b.i);
+    };
+    const rows = s.uids.map(uid => {
+      const lu = pw.map((w, k) => lineupOf(uid, k));
+      const tot = lu.map(l => l.reduce((a, e) => a + e.x.mu, 0)), flat = lu.map(l => l.reduce((a, e) => a + (e.x.bye ? 0 : e.x.flat), 0));
+      const hurtSet = new Set(lu.flat().filter(e => e.c.hurt).map(e => e.c.pid));
+      const hurtPts = mean(lu.map(l => l.filter(e => e.c.hurt).reduce((a, e) => a + e.x.mu, 0)));
+      return { uid, lu, tot, str: mean(tot), slate: mean(tot) - mean(flat), hurt: hurtSet.size, hurtPts };
+    });
+
+    // Title odds: playoff fields from the Playoff Picture's simulations, then the bracket, scored from each lineup's curves
+    let sim = null;
+    const P6 = s.playoffTeams === 6;
+    if (P6) {
+      const pp = playoffPicture(s, EX_N, null, null, { orders: true });
+      const orders = pp.orders && pp.orders.length ? pp.orders : [s.standings.slice(0, 6).map(r => r.uid)];
+      let seed = 20261117;
+      const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+      const gauss = () => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+      const L = {}; rows.forEach(r => { L[r.uid] = r.lu; });
+      const cnt = {}; s.uids.forEach(u => { cnt[u] = { po: 0, bye: 0, fin: 0, title: 0 }; });
+      let zt;
+      const score = (u, k) => { let t = 0; const z = zt[k]; L[u][k].forEach(e => { const c = e.c, m = e.x.mu; if (!m) return; if (c.dud && rnd() < c.dud) { t += rnd() * 0.25 * m; return; } const zz = z[c.team] !== undefined ? z[c.team] : (z[c.team] = gauss()); const q = Math.sqrt(c.rho) * zz + Math.sqrt(1 - c.rho) * gauss(); t += c.skew ? m * Math.exp(c.ls * q - c.ls * c.ls / 2) : Math.max(c.pos === "DEF" ? -10 : 0, m + c.cv * m * q); }); return t; };
+      const play = (a, b, k) => { const x = score(a, k), y = score(b, k); return x > y ? a : y > x ? b : (rnd() < 0.5 ? a : b); };
+      for (let i = 0; i < EX_N; i++) {
+        const o = orders[i % orders.length]; zt = [{}, {}, {}];
+        o.forEach((u, j) => { cnt[u].po++; if (j < 2) cnt[u].bye++; });
+        const w36 = play(o[2], o[5], 0), w45 = play(o[3], o[4], 0);
+        const fa = play(o[0], w45, 1), fb = play(o[1], w36, 1);
+        cnt[fa].fin++; cnt[fb].fin++; cnt[play(fa, fb, 2)].title++;
+      }
+      sim = {}; s.uids.forEach(u => { const c = cnt[u]; sim[u] = { po: c.po / EX_N, bye: c.bye / EX_N, fin: c.fin / EX_N, title: c.title / EX_N, status: pp.status[u] }; });
+    }
+    rows.forEach(r => { r.sim = sim ? sim[r.uid] : null; });
+    // Week ranks for color: top 3 green, bottom 3 red
+    pw.forEach((w, k) => { const o = rows.slice().sort((a, b) => b.tot[k] - a.tot[k]); o.forEach((r, i) => { (r.rk = r.rk || [])[k] = i + 1; }); });
+    rows.slice().sort((a, b) => b.str - a.str).forEach((r, i) => { r.strRank = i + 1; });
+    return (st.exCache = { tag: M.exported, s, pw, rows, sim, factor, posAvg, curveOf, nameOf, hasFut: pw.some(w => fut[w] && Object.keys(fut[w]).length), lastW });
+  }
+
+  function exodusBlock() {
+    const X = exodusData(); if (!X) return "";
+    const s = X.s, N = X.rows.length, by = st.exSort === "str" || !X.sim ? "str" : "title";
+    const rows = X.rows.slice().sort((a, b) => by === "title" ? (b.sim.title - a.sim.title || b.str - a.str) : b.str - a.str);
+    const tPct = r => { const v = r.sim.title; return r.sim.status === "eliminated" ? "Out" : v >= 0.995 ? ">99%" : v < 0.005 ? (v > 0 ? "<1%" : "0%") : Math.round(v * 100) + "%"; };
+    const oPct = v => (v >= 0.995 ? (v === 1 ? "In" : ">99%") : v < 0.005 ? (v > 0 ? "<1%" : "0%") : Math.round(v * 100) + "%");
+    const wcls = k => (k <= 3 ? "w" : k > N - 3 ? "l" : "");
+    let h = sec("Exodus", `Playoff power rankings: who is built for Weeks ${X.pw[0]}, ${X.pw[1]}, and ${X.pw[2]}, the road to the championship.`);
+    h += `<details class="explain ex-info"><summary>How Exodus works</summary><p>Each team's best starting lineup for each playoff week, from today's roster. A player's number starts with his 2026 average in league scoring, first downs included. For backs, receivers, and tight ends it leans on his Workload points, and for everyone on this week's Sleeper projection. Then it moves with that week's NFL opponent: how many points that defense has given up to his position this year, pulled toward average because ten games is a small sample.${X.hasFut ? " Sleeper's own projection for that week counts for a quarter." : ""}</p><p>Players on the prayer list (Out, IR, Doubtful, and the rest) count as healthy, because whoever holds them is counting on them for the playoffs. Their numbers carry a wider spread, and the team carries a tag. For those numbers to hold, the man has to get healthy first.</p>${X.sim ? `<p>Title odds: 10,000 seasons from the Playoff Picture decide the six seeds. Seeds 1 and 2 sit out Week ${X.pw[0]}. Then each playoff game is played out from every starter's own range of scores, with the same Monday Night Vigil curves, so upsets happen as often as they should. One game is a coin with a weight on it, so read these as odds, not a verdict.</p>` : ""}</details>`;
+    if (X.sim) h += `<div class="chips" role="group" aria-label="Exodus order"><button data-exsort="title" aria-pressed="${by === "title"}">Title odds</button><button data-exsort="str" aria-pressed="${by === "str"}">Playoff strength</button></div>`;
+    h += `<div class="scroll"><table class="data ex-t" data-hide="${X.sim ? "5,6,7,8" : "4"}"><thead><tr><th>Team</th>${X.pw.map(w => `<th>Wk ${w}</th>`).join("")}${X.sim ? "<th>Title</th>" : ""}<th>Slate</th>${X.sim ? "<th>Final</th><th>Playoffs</th><th>Bye</th>" : ""}</tr></thead><tbody>`;
+    rows.forEach((r, i) => {
+      const tag = r.hurt ? ` <span class="inj" title="Starters who must get healthy">${r.hurt} hurt</span>` : "";
+      const byeLikely = r.sim && r.sim.bye >= 0.5;
+      h += `<tr${r.uid === st.me ? ' class="me"' : ""}><td class="team"><span class="rank">${i + 1}</span>${whoInline(r.uid, s)}${tag}</td>${r.tot.map((t, k) => `<td class="${k === 0 && byeLikely ? "muted" : wcls(r.rk[k])}"${k === 0 && byeLikely ? ' title="Likely bye week"' : ""}>${f1(t)}</td>`).join("")}${X.sim ? `<td><b>${tPct(r)}</b></td>` : ""}<td class="${r.slate >= 1 ? "w" : r.slate <= -1 ? "l" : ""}">${sign(r.slate)}</td>${X.sim ? `<td>${r.sim.status === "eliminated" ? "Out" : oPct(r.sim.fin)}</td><td>${r.sim.status === "clinched" ? "In" : r.sim.status === "eliminated" ? "Out" : oPct(r.sim.po)}</td><td>${r.sim.status === "eliminated" ? "Out" : oPct(r.sim.bye)}</td>` : ""}</tr>`;
+    });
+    h += `</tbody></table></div>`;
+    h += `<p class="fine">Week columns are projected starting lineup points, in league scoring. Green is a top 3 lineup that week, red a bottom 3. A grey Week ${X.pw[0]} means the team more likely than not has a bye. Slate is what the NFL matchups add or take away across the three weeks, per week. "Hurt" counts starters on the prayer list.</p>`;
+
+    // One team, week by week
+    const ids = X.rows.map(r => r.uid), team = ids.includes(st.exTeam) ? st.exTeam : ids.includes(st.me) ? st.me : rows[0].uid, R = X.rows.find(r => r.uid === team);
+    const k = [0, 1, 2].includes(st.exWk) ? st.exWk : 0, w = X.pw[k];
+    h += `<h3>Lineup for the playoffs</h3><label class="pl-team"><span class="sr">Team</span><select id="exTeam" aria-label="Team">${rows.map(r => `<option value="${esc(r.uid)}"${r.uid === team ? " selected" : ""}>${esc(ownerName(r.uid))} · ${esc(teamIn(r.uid, s))}</option>`).join("")}</select></label>`;
+    h += `<div class="chips" role="group" aria-label="Playoff week">${X.pw.map((x, j) => `<button data-exwk="${j}" aria-pressed="${j === k}">Week ${x}</button>`).join("")}</div>`;
+    const hp = R.lu[k].filter(e => e.c.hurt).reduce((a, e) => a + e.x.mu, 0);
+    h += `<p class="takeaway">${esc(ownerName(team))}: ${f1(R.tot[k])} projected in Week ${w}, ${ordinal(R.rk[k])} of ${N}.${hp > 0 ? ` ${f1(hp)} of it rides on players who must get healthy first.` : ""}${R.sim && R.sim.bye >= 0.5 && k === 0 ? " Likely a bye week for this team." : ""}</p>`;
+    h += `<div class="list">${R.lu[k].map(e => {
+      const c = e.c, x = e.x;
+      const draw = x.bye ? `<span class="l">no game</span>` : x.f >= EX_SOFT ? `<span class="w">soft draw</span>` : x.f <= EX_HARD ? `<span class="l">tough draw</span>` : "even draw";
+      const flag = c.hurt ? ` <span class="inj" title="Must get healthy first">${esc(c.hurt === "Sus" ? "Susp" : c.hurt)}</span>` : c.q ? ` <span class="inj" title="Sleeper injury status">Q</span>` : "";
+      const note = c.hurt ? `<div class="muted sm ex-need">Counted as healthy. He has to be back by Week ${w}.</div>` : c.thin ? `<div class="muted sm">No 2026 games yet, so this is a rough guess.</div>` : "";
+      return `<div class="row"><div><span class="rank ex-slot">${esc(e.slot === "FLEX" ? "FLX" : e.slot)}</span><b>${pn(c.pid, X.nameOf(c.pid))}</b>${flag}<div class="muted sm">${e.slot === "FLEX" ? esc(c.pos) + " · " : ""}${x.bye ? esc(c.team) : `${esc(c.team)} ${x.home ? "vs" : "at"} ${esc(x.opp)}`} · ${draw}</div>${note}</div><div class="r">${f1(x.mu)}<small>usual ${f1(c.mu)}</small></div></div>`;
+    }).join("")}</div>`;
+    h += `<p class="fine">Usual is his 2026 number before the matchup. A soft draw means that defense gives up at least 6% more than average to his position, a tough draw at least 6% less.</p>`;
+    return h;
+  }
+
+  /* ---------- The Pew Chart: every way to rank the congregation ---------- */
+  function pews() {
+    const s = season();
+    let h = sec("The Pew Chart", "Who sits where: right now, from here, and for the playoffs.");
+    if (s === st.model.latest) h += exodusBlock();
+    if (!s.complete && s.regWeeks.length) h += powerBlock(s);
+    h += allPlayBlock(s);
+    return h;
+  }
+
   function vigilState() {
     const L = st.raw && st.raw.live;
     if (!L || !Array.isArray(L.rows) || !L.teams || L.statsOk === false || !st.model) return { L: null, open: false, preview: false };
@@ -4193,7 +4356,7 @@ function wTeam(W, tm) {
     $("seasonWrap").hidden = v === "home" || v === "vigil" || v === "land" || v === "chart" || v === "advisor";
     navMarks(v);
     const y = window.scrollY;
-    const fn = { home, vigil, land, standings, week, rivals, members, history, draft, moves, trades, chart, advisor, gifts, prophets, work }[v];
+    const fn = { home, vigil, land, standings, pews, week, rivals, members, history, draft, moves, trades, chart, advisor, gifts, prophets, work }[v];
     const view = $("view"); view.dataset.view = v;
     try { view.innerHTML = fn(); }
     catch (e) { view.innerHTML = `<p class="empty">This page did not load: ${esc(e.message)}. Pick another season or refresh.</p>`; return; }
@@ -4225,6 +4388,7 @@ function wTeam(W, tm) {
   }
   // The Promised Land: show the tap, then run the simulation
   function landPaint() { const v = $("view"); v.classList.add("pl-busy"); requestAnimationFrame(() => setTimeout(() => { render(); v.classList.remove("pl-busy"); }, 0)); }
+  document.addEventListener("change", e => { if (e.target && e.target.id === "exTeam") { st.exTeam = e.target.value; render(); } });
   document.addEventListener("change", e => { if (e.target && e.target.id === "landTeam" && st.land) { st.land.team = e.target.value; landPaint(); } });
   $("moreBtn").addEventListener("click", () => setSheet($("sheet").hidden));
   $("scrim").addEventListener("click", () => setSheet(false));
@@ -4276,6 +4440,8 @@ function wTeam(W, tm) {
     if (b.dataset.gbcancel) { st.pending = null; st.pubMsg = null; render(); return; }
     if (b.dataset.prayall) { st.prayAll = true; render(); return; }
     if (b.dataset.tierjump) { const el = document.getElementById("tier-" + b.dataset.tierjump); if (el) el.scrollIntoView({ block: "start" }); return; }
+    if (b.dataset.exsort) { st.exSort = b.dataset.exsort; render(); return; }
+    if (b.dataset.exwk) { st.exWk = +b.dataset.exwk; render(); return; }
     if (b.dataset.prview) { st.prView = b.dataset.prview; store.set("gb-prview", st.prView); render(); return; }
     if (b.dataset.gview) { st.gView = b.dataset.gview; render(); return; }
     if (b.dataset.gpartner) { st.trade = { a: st.gTeam, b: b.dataset.gpartner, aGets: [], bGets: [] }; st.goto = "Build a Trade"; location.hash = "advisor"; return; }
@@ -4405,7 +4571,7 @@ function wTeam(W, tm) {
 
   function start(raw) {
     st.raw = raw;
-    Object.assign(st, { land: null, vigilCache: null, gCache: {}, ppCache: {}, stakeCache: {}, dCache: {}, scaleCache: {}, ideaCache: {}, mtRes: null, multi: null });
+    Object.assign(st, { land: null, vigilCache: null, exCache: undefined, gCache: {}, ppCache: {}, stakeCache: {}, dCache: {}, scaleCache: {}, ideaCache: {}, mtRes: null, multi: null });
     st.model = buildLeague(raw); st.pIdx = undefined; st.prCache = null; st.wk = undefined;
     Object.values(st.model.owners).forEach(o => { if (NICK[o.name]) { o.handle = o.name; o.name = NICK[o.name]; } });
     st.model.seasons.forEach(x => Object.keys(x.teamName).forEach(uid => { const o = st.model.owners[uid]; if (o && o.handle && x.teamName[uid] === o.handle) x.teamName[uid] = "Team " + o.name; }));
