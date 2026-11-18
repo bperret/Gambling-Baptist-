@@ -193,6 +193,15 @@ async function getProjections(state, cur) {
       if (d >= 0.01) out.check.worst.push([+w, pid, pts, mine]);
     }));
   }));
+  // Exodus: Sleeper's projections for the three playoff weeks, rostered players only, scored with league settings
+  const pws = (cur.league.settings && cur.league.settings.playoff_week_start) || 15;
+  out.future = {};
+  [pws, pws + 1, pws + 2].filter(w => w > week).forEach(w => jobs.push(async () => {
+    const res = await getJSON([`https://api.sleeper.com/projections/nfl/${season}/${w}?season_type=regular${POS}`, `https://api.sleeper.app/projections/nfl/regular/${season}/${w}`]);
+    if (!res) { out.misses.push("proj w" + w + " (playoffs)"); return; }
+    const F = {}; statRows(res.j).forEach(([pid, st]) => { if (!curRost.has(pid)) return; const v = scoreLine(st, sc); if (v > 0) F[pid] = v; });
+    out.future[w] = F;
+  }));
   // This week's NFL games from the projection rows: team, opponent, and kickoff date when Sleeper sends them
   jobs.push(async () => {
     const res = await getJSON([`https://api.sleeper.com/projections/nfl/${season}/${week}?season_type=regular${POS}`, `https://api.sleeper.app/projections/nfl/regular/${season}/${week}`]);
@@ -205,6 +214,7 @@ async function getProjections(state, cur) {
   out.check.worst = out.check.worst.sort((a, b) => Math.abs(b[2] - b[3]) - Math.abs(a[2] - a[3])).slice(0, 25);
   out.pts = out.weeks[week] || {};
   const c = out.check, rate = c.n ? c.exact / c.n : 0;
+  { const fw = Object.keys(out.future); if (fw.length) log(`  Playoff week projections: ${fw.map(w => `Week ${w} ${Object.keys(out.future[w]).length} players`).join(", ")}.`, "ok"); }
   log(`  Projections for ${Object.keys(out.weeks).length} weeks, ${Object.keys(out.pts).length} players this week.`, Object.keys(out.weeks).length ? "ok" : "bad");
   log(`  Scoring check: ${c.exact} of ${c.n} player-weeks match the league's points exactly (${(rate * 100).toFixed(1)}%).`, rate >= 0.98 ? "ok" : "bad");
   if (out.misses.length) log("  Missing: " + out.misses.join(", "), "bad");
