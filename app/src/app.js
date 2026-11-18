@@ -1,5 +1,5 @@
 
-const DYK_SEED = 42;
+const DYK_SEED = 44;
 // League model built from the export file. Pure functions, no DOM.
 // Trades reversed within 48 hours: the later trade's adds are the earlier trade's drops, and the other way around
 function reversedTrades(txs) {
@@ -3239,6 +3239,10 @@ function wTeam(W, tm) {
   const gUnit = data => (data.scoring === "proj" ? "proj pts" : data.mode === "current" || data.mode === "ros" ? "value" : data.mode === "season" ? "pts per week" : "pts");
   const G_INJ_SHORT = { Questionable: "Q", Doubtful: "D", Out: "Out", IR: "IR", PUP: "PUP", Sus: "Susp", NA: "NA", DNR: "DNR", COV: "COV" };
   const offInj = pid => { const x = st.model.injuries && st.model.injuries[pid]; return x && x.s ? x.s : null; };
+  // Laborers prayer list filter: Sleeper injury statuses, in the order they show as chips
+  const W_INJ = [["Questionable", "Questionable"], ["Doubtful", "Doubtful"], ["Out", "Out"], ["IR", "IR"], ["PUP", "PUP"], ["Sus", "Suspended"], ["NA", "Not active"], ["DNR", "DNR"], ["COV", "COV"]];
+  const injChip = pid => { const s0 = offInj(pid); return s0 ? ` <span class="inj" title="Sleeper injury status">${esc(G_INJ_SHORT[s0] || s0)}</span>` : ""; };
+  const wHidden = () => { if (!Array.isArray(st.wHide)) { let a = []; try { a = JSON.parse(store.get("gb-whide") || "[]"); } catch (e) { a = []; } st.wHide = Array.isArray(a) ? a : []; } return new Set(st.wHide); };
   const gPlayer = pid => { const p = st.model.players && st.model.players[pid]; const e = st.tv && st.tv.cons.byPid[pid]; return p ? p[0] : e ? e.name : "Empty slot"; };
   const gTeamAbbr = pid => { const p = st.model.players && st.model.players[pid]; return p ? (p[1] === "DEF" ? "" : p[2] || "") : ""; };
 
@@ -3329,13 +3333,13 @@ function wTeam(W, tm) {
   }
 
   // Movers: risers, fill-ins, and fallers across the league
-  function moversBlock(W, nm) {
-    const all = Object.values(W.players).filter(p => p.trend && p.trend.move).sort((a, b) => b.trend.move.score - a.trend.move.score);
+  function moversBlock(W, nm, keep) {
+    const all = Object.values(W.players).filter(p => p.trend && p.trend.move && (!keep || keep(p.pid))).sort((a, b) => b.trend.move.score - a.trend.move.score);
     if (!all.length) return "";
     const lw = W.weeks[W.weeks.length - 1], groups = [["New Calling", "t-up", all.filter(p => p.trend.move.up && !p.trend.move.gone)], ["Filling In", "t-fill", all.filter(p => p.trend.move.gone)], ["Back Pew", "t-down", all.filter(p => !p.trend.move.up)]];
     const room = st.wMove || "New Calling", cur = groups.find(g => g[0] === room) || groups[0];
     const list = st.wMoveAll ? cur[2] : cur[2].slice(0, 6);
-    const row = p => { const m = p.trend.move; return `<div class="row"><div><b>${pn(p.pid, nm(p.pid))}</b> ${trArrow(p)}<div class="muted sm">${esc(p.pos)} · ${esc(p.team)} · ${esc(ownTag(p.pid))}${m.gone ? ` · for ${trGone(m.gone)}` : ""}${p.trend.exits.length ? ` · Week ${p.trend.exits.join(", ")} left out` : ""}</div></div><div class="r ${m.gone ? "" : m.up ? "w" : "l"}">${m.up ? "+" : "−"}${f1(Math.abs(m.d) * 100)}<small>${esc(TR_NAME[m.f])} ${shPct(m.a)} to ${shPct(m.b)}</small></div></div>`; };
+    const row = p => { const m = p.trend.move; return `<div class="row"><div><b>${pn(p.pid, nm(p.pid))}</b> ${trArrow(p)}${injChip(p.pid)}<div class="muted sm">${esc(p.pos)} · ${esc(p.team)} · ${esc(ownTag(p.pid))}${m.gone ? ` · for ${trGone(m.gone)}` : ""}${p.trend.exits.length ? ` · Week ${p.trend.exits.join(", ")} left out` : ""}</div></div><div class="r ${m.gone ? "" : m.up ? "w" : "l"}">${m.up ? "+" : "−"}${f1(Math.abs(m.d) * 100)}<small>${esc(TR_NAME[m.f])} ${shPct(m.a)} to ${shPct(m.b)}</small></div></div>`; };
     let h = `<h3>Movers</h3><p class="fine top">Last 3 team games against the earlier ones, through Week ${lw}.</p><div class="chips wrap" role="group" aria-label="Movers">${groups.map(g => `<button type="button" data-wmove="${esc(g[0])}" aria-pressed="${g[0] === cur[0]}">${esc(g[0])} ${g[2].length}</button>`).join("")}</div>`;
     h += list.length ? `<div class="list">${list.map(row).join("")}</div>` : `<p class="empty">No one here this week.</p>`;
     if (cur[2].length > 6) h += `<button type="button" class="more-cols" data-wmoveall="1">${st.wMoveAll ? "Show fewer" : `Show ${cur[2].length - 6} more`}</button>`;
@@ -3355,14 +3359,25 @@ function wTeam(W, tm) {
     h += `<p class="fine top">${esc(s.year)}, weeks ${wk[0]} to ${wk[wk.length - 1]}. Shares count only the games a player played.</p>`;
     if (!W.ok) h += `<div class="warn"><b>Rough Workload points.</b> Tested on weeks ${(Object.values(q)[0] || {}).testWeeks ? Object.values(q)[0].testWeeks.join(", ") : ""}, usage explains only ${W.r2Test != null ? Math.round(W.r2Test * 100) : 0}% of weekly scoring so far. Treat them as a loose guide. Shares are exact.</div>`;
 
-    h += moversBlock(W, nm);
+    // Prayer list filter: hide players by Sleeper injury status in Movers and Most work
+    const hide = wHidden(), injN = {};
+    Object.values(W.players).forEach(p => { const s0 = offInj(p.pid); if (s0) injN[s0] = (injN[s0] || 0) + 1; });
+    const present = W_INJ.filter(([k]) => injN[k]);
+    const keep = pid => { const s0 = offInj(pid); return !s0 || !hide.has(s0); };
+    if (present.length) {
+      const nHid = present.reduce((a, [k]) => a + (hide.has(k) ? injN[k] : 0), 0);
+      const allOn = present.every(([k]) => hide.has(k));
+      h += `<div class="wfilt"><span class="sl">Prayer list</span><div class="chips wrap" role="group" aria-label="Hide injured players"><button type="button" data-winj="none" aria-pressed="${nHid === 0}">Show everyone</button><button type="button" data-winj="all" aria-pressed="${allOn}">Hide all injured</button>${present.map(([k, l]) => `<button type="button" data-winj="${esc(k)}" aria-pressed="${hide.has(k)}">${esc(l)} ${injN[k]}</button>`).join("")}</div><p class="fine top">${nHid ? `Hiding ${(L => L.length <= 2 ? L.join(" and ") : L.slice(0, -1).join(", ") + ", and " + L[L.length - 1])(present.filter(([k]) => hide.has(k)).map(x => x[1]))} players from Movers and Most work. Team by team still shows everyone, so the shares add up.` : "Tap a status to hide those players from Movers and Most work. Sleeper injury statuses."}</p></div>`;
+    }
+
+    h += moversBlock(W, nm, keep);
 
     // Leaders
     const pos = st.wPos || "all";
-    const pool = Object.values(W.players).filter(p => p.g >= 3 && p.wp != null && (pos === "all" || p.pos === pos)).sort((a, b) => b.wpg - a.wpg);
+    const pool = Object.values(W.players).filter(p => p.g >= 3 && p.wp != null && (pos === "all" || p.pos === pos) && keep(p.pid)).sort((a, b) => b.wpg - a.wpg);
     h += `<h3>Most work</h3><div class="chips" role="group" aria-label="Position">${[["all", "All"], ["RB", "RB"], ["WR", "WR"], ["TE", "TE"]].map(([k, l]) => `<button type="button" data-wpos="${k}" aria-pressed="${pos === k}">${l}</button>`).join("")}</div>`;
     const show = st.wAll ? pool.slice(0, 60) : pool.slice(0, 12);
-    h += `<div class="list">${show.map((p, i) => `<div class="row"><div><span class="rank">${i + 1}</span><b>${pn(p.pid, nm(p.pid))}</b> ${trArrow(p)} ${roleTag(p.role)}<div class="muted sm">${esc(p.pos)} · ${esc(p.team)} · ${esc(ownTag(p.pid))} · ${p.g} games, ${p.td} TD</div></div><div class="r">${f1(p.wpg)}<small>scored ${f1(p.ppg)}, <span class="${p.gap > 0 ? "w" : p.gap < 0 ? "l" : ""}">${sign(p.gap / p.g)}</span> a game</small></div></div>`).join("")}</div>`;
+    h += `<div class="list">${show.map((p, i) => `<div class="row"><div><span class="rank">${i + 1}</span><b>${pn(p.pid, nm(p.pid))}</b> ${trArrow(p)} ${roleTag(p.role)}${injChip(p.pid)}<div class="muted sm">${esc(p.pos)} · ${esc(p.team)} · ${esc(ownTag(p.pid))} · ${p.g} games, ${p.td} TD</div></div><div class="r">${f1(p.wpg)}<small>scored ${f1(p.ppg)}, <span class="${p.gap > 0 ? "w" : p.gap < 0 ? "l" : ""}">${sign(p.gap / p.g)}</span> a game</small></div></div>`).join("")}</div>`;
     if (pool.length > 12) h += `<button type="button" class="more-cols" data-wall="1">${st.wAll ? "Show fewer" : `Show ${Math.min(60, pool.length) - 12} more`}</button>`;
     h += `<p class="fine">Workload points a game, players with 3 or more games. Green means he scored more than his usage is usually worth; red, less. The gap is mostly touchdowns. An arrow marks a Mover; a tan arrow means he is filling in.</p>`;
 
@@ -3379,7 +3394,7 @@ function wTeam(W, tm) {
       const second = T.tree[1];
       const tk = lead.p.tgtSh >= 0.25 ? `${nm(lead.p.pid)} is the alpha: ${shPct(lead.p.tgtSh)} of the targets in his games, ${shPct(lead.p.rztSh)} of the red zone targets.` : second && lead.sh - second.sh < 0.04 ? `No clear top target: ${nm(lead.p.pid)} and ${nm(second.p.pid)} split the looks.` : `${nm(lead.p.pid)} leads with ${shPct(lead.p.tgtSh)} of the targets in his games.`;
       h += `<p class="takeaway">${esc(tk)}</p>${bar(top.map(x => ({ cls: POS_CLASS[x.p.pos] ? "s-" + POS_CLASS[x.p.pos] : "s-ot", sh: x.sh, t: `${nm(x.p.pid)} ${shPct(x.sh)}` })).concat([{ cls: "s-rest", sh: restSh, t: `Everyone else ${shPct(restSh)}` }]), `Target share for ${st.wTeam}`)}`;
-      h += `<div class="list">${T.tree.slice(0, 6).map(x => `<div class="row"><div><b>${pn(x.p.pid, nm(x.p.pid))}</b> ${trArrow(x.p)} ${roleTag(x.p.role)}<div class="muted sm">${esc(x.p.pos)} · ${esc(ownTag(x.p.pid))} · red zone ${shPct(x.p.rztSh)} · catch rate ${shPct(x.p.catchRate)}</div></div><div class="r">${shPct(x.p.tgtSh)}<small class="${moveCls(x.sh3, x.sh, 0.05)}">last 3 games ${shPct(x.sh3)}</small></div></div>`).join("")}</div>`;
+      h += `<div class="list">${T.tree.slice(0, 6).map(x => `<div class="row"><div><b>${pn(x.p.pid, nm(x.p.pid))}</b> ${trArrow(x.p)} ${roleTag(x.p.role)}${injChip(x.p.pid)}<div class="muted sm">${esc(x.p.pos)} · ${esc(ownTag(x.p.pid))} · red zone ${shPct(x.p.rztSh)} · catch rate ${shPct(x.p.catchRate)}</div></div><div class="r">${shPct(x.p.tgtSh)}<small class="${moveCls(x.sh3, x.sh, 0.05)}">last 3 games ${shPct(x.sh3)}</small></div></div>`).join("")}</div>`;
       h += `<p class="fine">The bar splits all ${T.tgt} ${st.wTeam} targets over ${T.games} games. The number is his share in the games he played. Last 3 is green when up 5 points or more, red when down 5 or more.</p>`;
     }
     { const Q = wQbSplits(W, st.wTeam); if (Q) { const last = pid => { const a = String(nm(pid)).replace(/\s+(Jr\.?|Sr\.?|II|III|IV)$/, "").split(" "); return a[a.length - 1]; };
@@ -3389,7 +3404,7 @@ function wTeam(W, tm) {
       const tk = f0.p.role === "Workhorse" || f0.sh >= 0.7 ? `${nm(f0.p.pid)} is a workhorse: ${shPct(f0.sh)} of the backfield's Workload points.` : f1b && f0.sh < 0.55 ? `A committee: ${nm(f0.p.pid)} ${shPct(f0.sh)}, ${nm(f1b.p.pid)} ${shPct(f1b.sh)}.` : `${nm(f0.p.pid)} leads the backfield with ${shPct(f0.sh)} of its Workload points.`;
       const vul = T.field.find(x => x.p.role === "Vulture");
       h += `<h3>Backfield</h3><p class="takeaway">${esc(tk)}${vul ? ` ${esc(nm(vul.p.pid))} vultures the red zone.` : ""}</p>${bar(T.field.slice(0, 4).map((x, i) => ({ cls: "s-b" + i, sh: x.sh, t: `${nm(x.p.pid)} ${shPct(x.sh)}` })), `Backfield split for ${st.wTeam}`)}`;
-      h += `<div class="list">${T.field.slice(0, 4).map(x => `<div class="row"><div><b>${pn(x.p.pid, nm(x.p.pid))}</b> ${trArrow(x.p)} ${roleTag(x.p.role)}<div class="muted sm">${esc(ownTag(x.p.pid))} · carries ${shPct(x.p.rbAttSh)} · targets ${shPct(x.p.rbTgtSh)} · red zone ${shPct(x.p.rbRzSh)}</div></div><div class="r">${shPct(x.sh)}<small class="${moveCls(x.sh3, x.sh, 0.10)}">last 3 games ${shPct(x.sh3)}</small></div></div>`).join("")}</div>`;
+      h += `<div class="list">${T.field.slice(0, 4).map(x => `<div class="row"><div><b>${pn(x.p.pid, nm(x.p.pid))}</b> ${trArrow(x.p)} ${roleTag(x.p.role)}${injChip(x.p.pid)}<div class="muted sm">${esc(ownTag(x.p.pid))} · carries ${shPct(x.p.rbAttSh)} · targets ${shPct(x.p.rbTgtSh)} · red zone ${shPct(x.p.rbRzSh)}</div></div><div class="r">${shPct(x.sh)}<small class="${moveCls(x.sh3, x.sh, 0.10)}">last 3 games ${shPct(x.sh3)}</small></div></div>`).join("")}</div>`;
       h += `<p class="fine">Backfield share is each back's part of the running backs' Workload points, so a target counts for more than a carry. Carries, targets, and red zone are shares among the backs.</p>`;
     }
 
@@ -4267,6 +4282,7 @@ function wTeam(W, tm) {
     if (b.dataset.tvmore) { st.chartAll = true; render(); return; }
     if (b.dataset.tvrow) { st.chartOpen = st.chartOpen === b.dataset.tvrow ? null : b.dataset.tvrow; render(); return; }
     if (b.dataset.tvadd) { tvAddToTrade(b.dataset.tvadd); return; }
+    if (b.dataset.winj) { const k = b.dataset.winj; let H = wHidden(); if (k === "none") H = new Set(); else if (k === "all") H = new Set(W_INJ.map(x => x[0])); else if (H.has(k)) H.delete(k); else H.add(k); st.wHide = [...H]; st.wAll = false; st.wMoveAll = false; store.set("gb-whide", st.wHide.length ? JSON.stringify(st.wHide) : null); render(); return; }
     if (b.dataset.wpos) { st.wPos = b.dataset.wpos; st.wAll = false; render(); return; }
     if (b.dataset.wall) { st.wAll = !st.wAll; render(); return; }
     if (b.dataset.wmove) { st.wMove = b.dataset.wmove; st.wMoveAll = false; render(); return; }
