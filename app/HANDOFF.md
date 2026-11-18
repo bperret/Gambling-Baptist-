@@ -94,7 +94,7 @@ The commissioner sends the export JSON (or uses the drop zone), the Reddit trade
   - 10,000 simulations per change, run after the tap paints. About 0.2 to 0.3 seconds in the workspace.
   - Check: `node checks/land.js sim sim` (lock and unlock, lose out, clear restores today's odds, team switch, the table fits the card, the Playoff Picture link).
   - Later, if asked: title odds through the bracket; using the Vigil's live replays for the week in progress.
-- **The Pew Chart (`pews()`, tab `#pews`, after the Bulletin in the top tabs, first in the More sheet; added Nov 17):** Exodus, then Pulpit Power Rankings (Acts and Revelation), then Everyone Plays Everyone. The last two moved off the Bulletin, which now links here.
+- **The Pew Chart (`pews()`, tab `#pews`, after the Bulletin in the top tabs, first in the More sheet; added Nov 17):** Pulpit Power Rankings (Acts and Revelation), then Everyone Plays Everyone, then Exodus at the bottom (Benton, Nov 17). The last two moved off the Bulletin, which now links here.
 - **Exodus (`exodusData()`, `exodusBlock()`):** playoff power rankings for weeks `pws` to `pws + 2` (15 to 17). Latest season only, until the first playoff week is scored.
   - NFL opponents come from `NFL26` at the top of `src/app.js` (2026 regular season from nflverse games.csv, `LA` stored as `LAR`). It matched Sleeper's Week 11 games and every usage week. No byes in Weeks 15 to 17.
   - Player mean: 2026 games in league scoring, plus Workload points at 3 games' weight (RB, WR, TE, when the fit is ok), plus this week's Sleeper projection at 2 games' weight (only when above 0). No data at all: half the position's starter average, flagged.
