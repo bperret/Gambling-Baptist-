@@ -10,3 +10,6 @@ tvdump.json
 *.png
 sim/
 live/
+simold/
+simtrade/
+vsim/

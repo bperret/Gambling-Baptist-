@@ -1,5 +1,5 @@
 
-const DYK_SEED = 52;
+const DYK_SEED = 53;
 // 2026 NFL regular season, weeks 1 to 17, away@home (nflverse schedule; Rams as LAR to match Sleeper). Exodus reads opponents from here.
 const NFL26 = {"1":"NE@SEA SF@LAR CHI@CAR TB@CIN NO@DET BUF@HOU BAL@IND CLE@JAX ATL@PIT NYJ@TEN ARI@LAC MIA@LV GB@MIN WAS@PHI DAL@NYG DEN@KC","2":"DET@BUF CAR@ATL NO@BAL MIN@CHI CIN@HOU PIT@NE GB@NYJ CLE@TB PHI@TEN JAX@DEN LV@LAC SEA@ARI WAS@DAL MIA@SF IND@KC NYG@LAR","3":"ATL@GB LAC@BUF CAR@CLE NYJ@DET HOU@IND NE@JAX KC@MIA TEN@NYG CIN@PIT SEA@WAS ARI@SF MIN@TB BAL@DAL LV@NO LAR@DEN PHI@CHI","4":"PIT@CLE IND@WAS TEN@BAL NE@BUF NYJ@CHI JAX@CIN DAL@HOU ARI@NYG LAR@PHI GB@TB MIA@MIN KC@LV LAC@SEA DEN@SF DET@CAR ATL@NO","5":"TB@DAL PHI@JAX CHI@GB CIN@MIA LV@NE MIN@NO CLE@NYJ IND@PIT HOU@TEN NYG@WAS DEN@LAC DET@ARI SF@SEA BAL@ATL BUF@LAR","6":"SEA@DEN HOU@JAX CHI@ATL BAL@CLE TEN@IND NYJ@NE NO@NYG CAR@PHI PIT@TB ARI@LAR LAC@KC BUF@LV DAL@GB WAS@SF","7":"NE@CHI PIT@NO SF@ATL CIN@BAL TB@CAR NYG@HOU IND@MIN MIA@NYJ CLE@TEN DEN@ARI GB@DET LAR@LV KC@SEA DAL@PHI","8":"CAR@GB BAL@BUF TEN@CIN ARI@DAL MIN@DET IND@JAX LV@NYJ CLE@PIT ATL@TB LAC@LAR KC@DEN NE@MIA PHI@WAS CHI@SEA","9":"JAX@BAL CIN@ATL DEN@CAR DAL@IND NYJ@KC DET@MIA CLE@NO NYG@PHI LAR@WAS HOU@LAC GB@NE ARI@SEA LV@SF TB@CHI BUF@MIN","10":"WAS@NYG NE@DET KC@ATL HOU@CLE MIN@GB MIA@IND CAR@NO BUF@NYJ JAX@TEN LAR@ARI SEA@LV SF@DAL PIT@CIN LAC@BAL","11":"IND@HOU MIA@BUF BAL@CAR NO@CHI TEN@DAL TB@DET ARI@KC JAX@NYG NYJ@LAC LV@DEN PIT@PHI MIN@SF CIN@WAS","12":"GB@LAR CHI@DET PHI@DAL KC@BUF DEN@PIT NO@CIN BAL@HOU NYG@IND TEN@JAX NYJ@MIA ATL@MIN NE@LAC WAS@ARI SEA@SF LV@CLE CAR@TB","13":"KC@LAR DET@ATL JAX@CHI CIN@CLE GB@NO SF@NYG LAC@TB WAS@TEN PHI@ARI MIA@DEN CAR@MIN BUF@NE HOU@PIT DAL@SEA","14":"MIN@NE TB@BAL NO@CAR ATL@CLE TEN@DET CHI@MIA DEN@NYJ IND@PHI HOU@WAS LAC@LV KC@CIN NYG@SEA LAR@SF BUF@GB PIT@JAX","15":"SF@LAC SEA@PHI CHI@BUF CIN@CAR MIA@GB JAX@HOU CLE@NYG BAL@PIT NO@TB IND@TEN ATL@WAS NYJ@ARI DAL@LAR DEN@LV DET@MIN NE@KC","16":"HOU@PHI GB@CHI BUF@DEN LAR@SEA TB@ATL CLE@BAL CIN@IND LAC@MIA WAS@MIN ARI@NO NE@NYJ CAR@PIT TEN@LV SF@KC JAX@DAL NYG@DET","17":"BAL@CIN NO@ATL SEA@CAR IND@CLE NYG@DAL WAS@JAX KC@LAC BUF@MIA DEN@NE MIN@NYJ LAR@TB PIT@TEN LV@ARI DET@CHI PHI@SF HOU@GB"};
 // League model built from the export file. Pure functions, no DOM.
@@ -3782,7 +3782,7 @@ function wTeam(W, tm) {
   /* ---------- Monday Night Vigil: Monday only, decided by outcomes, never by Sleeper's win odds ----------
      The commissioner exports after Sunday's games. live.rows hold each lineup's points so far, live.teams says which
      NFL teams have not played. Each player still to play is replayed from his own 2026 games in this league's scoring.
-     Teammates draw the same week, so a big Bills night lifts every Bills player together. */
+     Players in the same NFL game draw together (corrSampler), so a big Bills night lifts the Bills and sinks the defense facing them. */
   const NFL = { ARI: "Cardinals", ATL: "Falcons", BAL: "Ravens", BUF: "Bills", CAR: "Panthers", CHI: "Bears", CIN: "Bengals", CLE: "Browns", DAL: "Cowboys", DEN: "Broncos", DET: "Lions", GB: "Packers", HOU: "Texans", IND: "Colts", JAX: "Jaguars", KC: "Chiefs", LV: "Raiders", LAC: "Chargers", LAR: "Rams", LA: "Rams", MIA: "Dolphins", MIN: "Vikings", NE: "Patriots", NO: "Saints", NYG: "Giants", NYJ: "Jets", PHI: "Eagles", PIT: "Steelers", SF: "49ers", SEA: "Seahawks", TB: "Buccaneers", TEN: "Titans", WAS: "Commanders" };
   const nfl = t => NFL[t] || t;
   const VG_N = 10000, VG_DOTS = 50, VG_MIRACLE = 0.01;
@@ -3790,7 +3790,39 @@ function wTeam(W, tm) {
   // 10.7% beat the 90th percentile, 1.8% the 97.5th, 1.0% the 99th. Low tail: 2.9% under the 1st, mostly exact zeros.
   const VG_SAT = ["Out", "Doubtful", "IR", "PUP", "Sus", "NA", "DNR", "COV"];
   const VG_POS = ["QB", "RB", "WR", "TE", "K", "DEF"], VG_WIDEN = 1.4, VG_KM = 3, VG_KS = 4;
-  const VG_RHO = { QB: 0.27, WR: 0.27, TE: 0.27, RB: 0.07, K: 0.07, DEF: 0 };
+  // Pair correlations inside one NFL game (Nov 18, replaces one shared team factor of 0.27). "same" = teammates, "opp" = the two
+  // teams in that game; players in different games are independent. Blend: 2026 league games in our scoring (checks/corr_calib.py,
+  // weeks 1 to 10, players with 4+ games and a starter's average) with season-long weekly priors worth 300 pair-weeks:
+  // RotoWire 2022-25 full PPR (QB-WR1 +0.31, QB-TE +0.27, QB-RB +0.07, WR-WR -0.02); kicker, defense, and opposing pairs from
+  // FantasyLabs/RotoViz, Fantasy Football Analytics, and 4for4, scaled down from single-slate DFS to weekly season-long.
+  const CORR = { "same:QB-WR": 0.3, "same:QB-TE": 0.26, "same:QB-RB": 0.07, "same:WR-WR": -0.02, "same:RB-RB": -0.11, "same:RB-WR": -0.03, "same:RB-TE": 0.01, "same:TE-WR": 0.03, "same:TE-TE": -0.02, "same:K-QB": 0.18, "same:K-WR": 0.07, "same:K-TE": 0.04, "same:K-RB": 0.03, "same:DEF-K": 0.14, "same:DEF-QB": -0.06, "same:DEF-RB": 0.05, "same:DEF-WR": -0.01, "same:DEF-TE": -0.04, "opp:QB-QB": 0.23, "opp:QB-WR": 0.06, "opp:QB-TE": 0.09, "opp:QB-RB": 0.04, "opp:WR-WR": 0.01, "opp:TE-WR": 0.03, "opp:RB-WR": 0.05, "opp:RB-TE": 0.03, "opp:RB-RB": -0.06, "opp:TE-TE": 0.04, "opp:K-K": 0.04, "opp:K-QB": -0.03, "opp:K-WR": -0.01, "opp:K-TE": -0.04, "opp:K-RB": -0.01, "opp:DEF-QB": -0.38, "opp:DEF-RB": -0.21, "opp:DEF-WR": -0.12, "opp:DEF-TE": -0.14, "opp:DEF-K": -0.2, "opp:DEF-DEF": -0.04 };
+  // The lognormal tail and the duds thin a correlation out, so the shared normal draw is set higher: target x lift x lift.
+  // About 0.87 survives per skewed position (QB, RB, WR, TE); K and DEF are normal and keep it all.
+  // checks/corr_check.js measures the realized correlations from the replay curves and must land within 0.03 of CORR.
+  const CORR_LIFT = { QB: 1.15, RB: 1.15, WR: 1.15, TE: 1.15, K: 1, DEF: 1 };
+  const corrKey = (a, b) => (a < b ? a + "-" + b : b + "-" + a);
+  const corrPair = (a, b) => (a.team && a.team === b.team ? CORR["same:" + corrKey(a.pos, b.pos)] || 0 : a.opp && a.opp === b.team ? CORR["opp:" + corrKey(a.pos, b.pos)] || 0 : 0);
+  const cholesky = R => { const n = R.length, L = R.map(() => new Float64Array(n)); for (let i = 0; i < n; i++) for (let j = 0; j <= i; j++) { let t = R[i][j]; for (let k = 0; k < j; k++) t -= L[i][k] * L[j][k]; if (i === j) { if (t <= 1e-9) return null; L[i][i] = Math.sqrt(t); } else L[i][j] = t / L[j][j]; } return L; };
+  // list: [{ pos, team, opp }]. Returns draw(gauss), which gives one standard normal per player with the pair correlations.
+  // Each NFL game is its own block. A block that is not a valid correlation matrix is shrunk toward independence until it is.
+  const corrSampler = list => {
+    const groups = {};
+    list.forEach((x, i) => { const g = x.team ? (x.opp ? (x.team < x.opp ? x.team + "@" + x.opp : x.opp + "@" + x.team) : x.team) : "solo" + i; (groups[g] = groups[g] || []).push(i); });
+    const blocks = Object.values(groups).map(idx => {
+      let shrink = 1, L = null;
+      while (!L && shrink > 0.05) { const R = idx.map((a, p) => idx.map((b, q) => p === q ? 1 : Math.max(-0.95, Math.min(0.95, (CORR_LIFT[list[a].pos] || 1) * (CORR_LIFT[list[b].pos] || 1) * shrink * corrPair(list[a], list[b]))))); L = cholesky(R); if (!L) shrink *= 0.85; }
+      return { idx, L };
+    });
+    return gauss => {
+      const z = new Float64Array(list.length);
+      blocks.forEach(({ idx, L }) => {
+        if (!L || idx.length === 1) { idx.forEach(i => { z[i] = gauss(); }); return; }
+        const g = idx.map(() => gauss());
+        idx.forEach((ii, p) => { let t = 0; const row = L[p]; for (let q = 0; q <= p; q++) t += row[q] * g[q]; z[ii] = t; });
+      });
+      return z;
+    };
+  };
   const VG_FALLBACK = { QB: { cv: 0.45, dud: 0.043, avg: 18.8 }, RB: { cv: 0.55, dud: 0.042, avg: 13.9 }, WR: { cv: 0.59, dud: 0.069, avg: 12.5 }, TE: { cv: 0.59, dud: 0.104, avg: 11.5 }, K: { cv: 0.55, dud: 0, avg: 8.6 }, DEF: { cv: 0.82, dud: 0, avg: 7.3 } };
   const dayKey = d => { const x = new Date(d); return x.getFullYear() + "-" + (x.getMonth() + 1) + "-" + x.getDate(); };
   // Open on the viewer's Monday, and only for an export taken that same day. The commissioner can preview any day.
@@ -3894,7 +3926,7 @@ function wTeam(W, tm) {
         const base = mu * cr * fx.f, m = fp != null ? (1 - EX_FUT) * base + EX_FUT * fp : base, flat = fp != null ? (1 - EX_FUT) * mu * cr + EX_FUT * fp : mu * cr;
         return { w, mu: m, flat, opp: g.opp, home: g.home, f: fx.f, fp, ctx };
       });
-      return (curves[pid] = { pid, pos: ps, team, n, mu, own, wx, pj, cv, ls, skew, dud: skew ? pr0.dud : 0, rho: VG_RHO[ps], hurt, q: inj === "Questionable", thin, call: calls[pid] || null, weeks });
+      return (curves[pid] = { pid, pos: ps, team, n, mu, own, wx, pj, cv, ls, skew, dud: skew ? pr0.dud : 0, hurt, q: inj === "Questionable", thin, call: calls[pid] || null, weeks });
     };
 
     // Best legal lineup for each team in each playoff week
@@ -3924,11 +3956,13 @@ function wTeam(W, tm) {
       const gauss = () => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
       const L = {}; rows.forEach(r => { L[r.uid] = r.lu; });
       const cnt = {}; s.uids.forEach(u => { cnt[u] = { po: 0, bye: 0, fin: 0, title: 0 }; });
+      // One correlated draw per playoff week for every starter in the league, so a shootout lifts both sides of that NFL game
+      const wIdx = pw.map(() => new Map()), wSamp = pw.map((w, k) => { const list = []; rows.forEach(r => r.lu[k].forEach(e => { if (!e.x.mu || wIdx[k].has(e.c.pid)) return; wIdx[k].set(e.c.pid, list.length); list.push({ pos: e.c.pos, team: e.c.team, opp: e.x.opp }); })); return corrSampler(list); });
       let zt;
-      const score = (u, k) => { let t = 0; const z = zt[k]; L[u][k].forEach(e => { const c = e.c, m = e.x.mu; if (!m) return; if (c.dud && rnd() < c.dud) { t += rnd() * 0.25 * m; return; } const zz = z[c.team] !== undefined ? z[c.team] : (z[c.team] = gauss()); const q = Math.sqrt(c.rho) * zz + Math.sqrt(1 - c.rho) * gauss(); t += c.skew ? m * Math.exp(c.ls * q - c.ls * c.ls / 2) : Math.max(c.pos === "DEF" ? -10 : 0, m + c.cv * m * q); }); return t; };
+      const score = (u, k) => { let t = 0; const z = zt[k] || (zt[k] = wSamp[k](gauss)), ix = wIdx[k]; L[u][k].forEach(e => { const c = e.c, m = e.x.mu; if (!m) return; if (c.dud && rnd() < c.dud) { t += rnd() * 0.25 * m; return; } const q = z[ix.get(c.pid)]; t += c.skew ? m * Math.exp(c.ls * q - c.ls * c.ls / 2) : Math.max(c.pos === "DEF" ? -10 : 0, m + c.cv * m * q); }); return t; };
       const play = (a, b, k) => { const x = score(a, k), y = score(b, k); return x > y ? a : y > x ? b : (rnd() < 0.5 ? a : b); };
       for (let i = 0; i < EX_N; i++) {
-        const o = orders[i % orders.length]; zt = [{}, {}, {}];
+        const o = orders[i % orders.length]; zt = [null, null, null];
         o.forEach((u, j) => { cnt[u].po++; if (j < 2) cnt[u].bye++; });
         const w36 = play(o[2], o[5], 0), w45 = play(o[3], o[4], 0);
         const fa = play(o[0], w45, 1), fb = play(o[1], w36, 1);
@@ -3951,7 +3985,7 @@ function wTeam(W, tm) {
     const oPct = v => (v >= 0.995 ? (v === 1 ? "In" : ">99%") : v < 0.005 ? (v > 0 ? "<1%" : "0%") : Math.round(v * 100) + "%");
     const wcls = k => (k <= 3 ? "w" : k > N - 3 ? "l" : "");
     let h = sec("Exodus", `Playoff power rankings: who is built for Weeks ${X.pw[0]}, ${X.pw[1]}, and ${X.pw[2]}, the road to the championship.`);
-    h += `<details class="explain ex-info"><summary>How Exodus works</summary><p>Each team's best starting lineup for each playoff week, from today's roster. A player's number starts with his 2026 average in league scoring, first downs included. For backs, receivers, and tight ends it leans on his Workload points, and for everyone on this week's Sleeper projection. Then it moves with that week's NFL opponent: how many points that defense has given up to his position this year, pulled toward average because ten games is a small sample.${X.hasFut ? " Sleeper's own projection for that week counts for a quarter." : ""}</p><p>Players on the prayer list (Out, IR, Doubtful, and the rest) count as healthy, because whoever holds them is counting on them for the playoffs. Their numbers carry a wider spread, and the team carries a tag. For those numbers to hold, the man has to get healthy first. The exception is a commissioner's call: when a return week is set for a key player, he sits until that week and the next man up starts.</p><p>Teammates matter too. When a teammate with a big role (18% or more of his team's targets and carries, or a starting quarterback ruled out) will be on or off the field in a playoff week, a player's number uses his 2026 average with or without that teammate, pulled toward his season average because the samples are small.</p>${X.sim ? `<p>Title odds: 10,000 runs. Each run first plays out the rest of the regular season, the same way the Playoff Picture does, to set that run's six seeds. Seeds 1 and 2 sit out Week ${X.pw[0]}. Then each playoff game in that run is played out from every starter's own range of scores, with the same Monday Night Vigil curves, so upsets happen as often as they should. One game is a coin with a weight on it, so read these as odds, not a verdict.</p>` : ""}</details>`;
+    h += `<details class="explain ex-info"><summary>How Exodus works</summary><p>Each team's best starting lineup for each playoff week, from today's roster. A player's number starts with his 2026 average in league scoring, first downs included. For backs, receivers, and tight ends it leans on his Workload points, and for everyone on this week's Sleeper projection. Then it moves with that week's NFL opponent: how many points that defense has given up to his position this year, pulled toward average because ten games is a small sample.${X.hasFut ? " Sleeper's own projection for that week counts for a quarter." : ""}</p><p>Players on the prayer list (Out, IR, Doubtful, and the rest) count as healthy, because whoever holds them is counting on them for the playoffs. Their numbers carry a wider spread, and the team carries a tag. For those numbers to hold, the man has to get healthy first. The exception is a commissioner's call: when a return week is set for a key player, he sits until that week and the next man up starts.</p><p>Teammates matter too. When a teammate with a big role (18% or more of his team's targets and carries, or a starting quarterback ruled out) will be on or off the field in a playoff week, a player's number uses his 2026 average with or without that teammate, pulled toward his season average because the samples are small.</p>${X.sim ? `<p>Title odds: 10,000 runs. Each run first plays out the rest of the regular season, the same way the Playoff Picture does, to set that run's six seeds. Seeds 1 and 2 sit out Week ${X.pw[0]}. Then each playoff game in that run is played out from every starter's own range of scores, with the same Monday Night Vigil curves, so upsets happen as often as they should. Players in the same NFL game move together: a quarterback and his receivers rise and fall as a pair, two receivers on one team barely move together, and a defense sinks when its opponent's offense has a big day. One game is a coin with a weight on it, so read these as odds, not a verdict.</p>` : ""}</details>`;
     if (X.sim) h += `<div class="chips" role="group" aria-label="Exodus order"><button data-exsort="title" aria-pressed="${by === "title"}">Title odds</button><button data-exsort="str" aria-pressed="${by === "str"}">Playoff strength</button></div>`;
     h += `<div class="scroll"><table class="data ex-t" data-hide="${X.sim ? "5,6,7,8" : "4"}"><thead><tr><th>Team</th>${X.pw.map(w => `<th>Wk ${w}</th>`).join("")}${X.sim ? "<th>Title</th>" : ""}<th>Slate</th>${X.sim ? "<th>Final</th><th>Playoffs</th><th>Bye</th>" : ""}</tr></thead><tbody>`;
     rows.forEach((r, i) => {
@@ -4044,7 +4078,7 @@ function wTeam(W, tm) {
       const sp = pr0.cv * mu, so = n > 1 ? sdv(v) : sp;
       const sd = Math.sqrt((n * so * so + VG_KS * sp * sp) / (n + VG_KS)) * VG_WIDEN;
       const skew = ps !== "K" && ps !== "DEF", s2 = skew ? Math.log(1 + (sd / mu) ** 2) : 0;
-      return (logs[pid] = { games: g, n, mu, sd, skew, lm: skew ? Math.log(mu) - s2 / 2 : 0, ls: Math.sqrt(s2), dud: skew ? pr0.dud : 0, rho: VG_RHO[ps], thin: n < 3, pos: ps });
+      return (logs[pid] = { games: g, n, mu, sd, skew, lm: skew ? Math.log(mu) - s2 / 2 : 0, ls: Math.sqrt(s2), dud: skew ? pr0.dud : 0, thin: n < 3, pos: ps });
     };
     const sideOf = r => {
       const uid = s.rosterOwner[r.roster_id];
@@ -4056,21 +4090,21 @@ function wTeam(W, tm) {
     const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
     const gauss = () => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
     // One player's night: a dud (early exit, near zero) at his position's dud rate, otherwise a draw from his curve.
-    // Teammates share a team factor, so a quarterback and his receivers rise and fall together.
-    const drawOne = (f, zt) => {
+    // z comes from corrSampler: a quarterback and his receivers rise and fall together, and the defense facing them falls.
+    const drawOne = (f, z) => {
       if (f.dud && rnd() < f.dud) return rnd() * 0.25 * f.mu;
-      const z = Math.sqrt(f.rho) * zt + Math.sqrt(1 - f.rho) * gauss();
       return f.skew ? Math.exp(f.lm + f.ls * z) : f.mu + f.sd * z;
     };
     // Final margins, trailer minus leader, over VG_N replays of Monday
     const replay = (lead, trail) => {
-      const all = trail.left.concat(lead.left), nT = trail.left.length, teams = [...new Set(all.map(x => x.team))];
+      const all = trail.left.concat(lead.left), nT = trail.left.length;
+      const samp = corrSampler(all.map(x => ({ pos: logOf(x.pid).pos, team: x.team, opp: (L.teams[x.team] || {}).opp || "" })));
       const out = new Float64Array(VG_N), draws = all.map(() => new Float32Array(VG_N));
       all.forEach(x => logOf(x.pid));
       for (let i = 0; i < VG_N; i++) {
-        const zt = {}; teams.forEach(t => { zt[t] = gauss(); });
+        const z = samp(gauss);
         let m = trail.pts - lead.pts;
-        all.forEach((x, j) => { const v = drawOne(logs[x.pid], zt[x.team]); draws[j][i] = v; m += j < nT ? v : -v; });
+        all.forEach((x, j) => { const v = drawOne(logs[x.pid], z[j]); draws[j][i] = v; m += j < nT ? v : -v; });
         out[i] = m;
       }
       // Each player: his average across all replays, and across the replays the trailer wins
@@ -4259,7 +4293,7 @@ function wTeam(W, tm) {
     h += sec("Monday Night Vigil", `Week ${V.L.week}, before ${games ? esc(games) : "the Monday game"}. "Watch and pray." Matthew 26:41. Snapshot from ${esc(when)}.`);
     h += `<details class="vg-info"><summary><span class="vg-i" aria-hidden="true">i</span>How the replays work</summary><div class="vg-info-b">
 <p><b>What a replay is.</b> We play out tonight's game ${VG_N.toLocaleString()} times. In each one, every player still to play gets a score drawn from his own range of possible nights. Then we add it up and see who wins.</p>
-<p><b>Where the range comes from.</b> The middle is his 2026 average in our scoring, nudged toward this week's projection. The width is how much he swings week to week, blended with how much his position swings, then widened 40% so he can still have a night he has not had yet. Running backs, receivers, tight ends, and quarterbacks get a long upside tail and a small chance of a dud. Kickers and defenses swing both ways, and a defense can go negative. A quarterback and his receivers rise and fall together.</p>
+<p><b>Where the range comes from.</b> The middle is his 2026 average in our scoring, nudged toward this week's projection. The width is how much he swings week to week, blended with how much his position swings, then widened 40% so he can still have a night he has not had yet. Running backs, receivers, tight ends, and quarterbacks get a long upside tail and a small chance of a dud. Kickers and defenses swing both ways, and a defense can go negative. Players in the same NFL game move together the way they do in real weeks: a quarterback and his receivers rise and fall together (about +0.3), two receivers on one team barely move together, and a defense sinks when the offense it faces has a big night.</p>
 <p><b>Is it honest?</b> We tested it on 1,751 real starter games from this season. About 1 in 100 beat what the model called a 1-in-100 night, which is what it should be. Sleeper's win odds are not used anywhere.</p>
 <p><b>The dots.</b> Each chart shows 50 of the replays, one dot each. Dots left of the line are comebacks for the trailing team. "8 of 50 Mondays" means about a 16% chance.</p>
 <p><b>The groups.</b> Still in the balance: the trailing team wins more than 1 in 100 replays. Miracle Territory: 1 in 100 or fewer. Literally Impossible: the trailing team has nobody left to play.</p>
