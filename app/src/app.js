@@ -1,5 +1,5 @@
 
-const DYK_SEED = 53;
+const DYK_SEED = 54;
 // 2026 NFL regular season, weeks 1 to 17, away@home (nflverse schedule; Rams as LAR to match Sleeper). Exodus reads opponents from here.
 const NFL26 = {"1":"NE@SEA SF@LAR CHI@CAR TB@CIN NO@DET BUF@HOU BAL@IND CLE@JAX ATL@PIT NYJ@TEN ARI@LAC MIA@LV GB@MIN WAS@PHI DAL@NYG DEN@KC","2":"DET@BUF CAR@ATL NO@BAL MIN@CHI CIN@HOU PIT@NE GB@NYJ CLE@TB PHI@TEN JAX@DEN LV@LAC SEA@ARI WAS@DAL MIA@SF IND@KC NYG@LAR","3":"ATL@GB LAC@BUF CAR@CLE NYJ@DET HOU@IND NE@JAX KC@MIA TEN@NYG CIN@PIT SEA@WAS ARI@SF MIN@TB BAL@DAL LV@NO LAR@DEN PHI@CHI","4":"PIT@CLE IND@WAS TEN@BAL NE@BUF NYJ@CHI JAX@CIN DAL@HOU ARI@NYG LAR@PHI GB@TB MIA@MIN KC@LV LAC@SEA DEN@SF DET@CAR ATL@NO","5":"TB@DAL PHI@JAX CHI@GB CIN@MIA LV@NE MIN@NO CLE@NYJ IND@PIT HOU@TEN NYG@WAS DEN@LAC DET@ARI SF@SEA BAL@ATL BUF@LAR","6":"SEA@DEN HOU@JAX CHI@ATL BAL@CLE TEN@IND NYJ@NE NO@NYG CAR@PHI PIT@TB ARI@LAR LAC@KC BUF@LV DAL@GB WAS@SF","7":"NE@CHI PIT@NO SF@ATL CIN@BAL TB@CAR NYG@HOU IND@MIN MIA@NYJ CLE@TEN DEN@ARI GB@DET LAR@LV KC@SEA DAL@PHI","8":"CAR@GB BAL@BUF TEN@CIN ARI@DAL MIN@DET IND@JAX LV@NYJ CLE@PIT ATL@TB LAC@LAR KC@DEN NE@MIA PHI@WAS CHI@SEA","9":"JAX@BAL CIN@ATL DEN@CAR DAL@IND NYJ@KC DET@MIA CLE@NO NYG@PHI LAR@WAS HOU@LAC GB@NE ARI@SEA LV@SF TB@CHI BUF@MIN","10":"WAS@NYG NE@DET KC@ATL HOU@CLE MIN@GB MIA@IND CAR@NO BUF@NYJ JAX@TEN LAR@ARI SEA@LV SF@DAL PIT@CIN LAC@BAL","11":"IND@HOU MIA@BUF BAL@CAR NO@CHI TEN@DAL TB@DET ARI@KC JAX@NYG NYJ@LAC LV@DEN PIT@PHI MIN@SF CIN@WAS","12":"GB@LAR CHI@DET PHI@DAL KC@BUF DEN@PIT NO@CIN BAL@HOU NYG@IND TEN@JAX NYJ@MIA ATL@MIN NE@LAC WAS@ARI SEA@SF LV@CLE CAR@TB","13":"KC@LAR DET@ATL JAX@CHI CIN@CLE GB@NO SF@NYG LAC@TB WAS@TEN PHI@ARI MIA@DEN CAR@MIN BUF@NE HOU@PIT DAL@SEA","14":"MIN@NE TB@BAL NO@CAR ATL@CLE TEN@DET CHI@MIA DEN@NYJ IND@PHI HOU@WAS LAC@LV KC@CIN NYG@SEA LAR@SF BUF@GB PIT@JAX","15":"SF@LAC SEA@PHI CHI@BUF CIN@CAR MIA@GB JAX@HOU CLE@NYG BAL@PIT NO@TB IND@TEN ATL@WAS NYJ@ARI DAL@LAR DEN@LV DET@MIN NE@KC","16":"HOU@PHI GB@CHI BUF@DEN LAR@SEA TB@ATL CLE@BAL CIN@IND LAC@MIA WAS@MIN ARI@NO NE@NYJ CAR@PIT TEN@LV SF@KC JAX@DAL NYG@DET","17":"BAL@CIN NO@ATL SEA@CAR IND@CLE NYG@DAL WAS@JAX KC@LAC BUF@MIA DEN@NE MIN@NYJ LAR@TB PIT@TEN LV@ARI DET@CHI PHI@SF HOU@GB"};
 // League model built from the export file. Pure functions, no DOM.
@@ -685,8 +685,10 @@ function hotHand(season) {
 
 /* ---------- Playoff odds, clinch watch, remaining schedule ---------- */
 function playoffPicture(season, sims, forced, focus, opts) {
-  // opts.orders: also keep each simulation's playoff field, seeds in order (Exodus)
-  const keepOrders = !!(opts && opts.orders), orders = keepOrders ? [] : null;
+  // opts.orders: also keep each simulation's playoff field, seeds in order (Exodus), and that simulation's injuries
+  // opts.roster: the roster engine (exodusData(true)). Each team's weekly mean then comes from its current roster that week
+  // (byes, injuries drawn per simulation, fill-ins); the spread stays the team's own, from its games.
+  const keepOrders = !!(opts && opts.orders), orders = keepOrders ? [] : null, RE = (opts && opts.roster) || null, injList = keepOrders && RE ? [] : null;
   sims = sims || 10000;
   const pws = season.pws, regLeft = [];
   for (let w = (season.regWeeks[season.regWeeks.length - 1] || 0) + 1; w < pws; w++) regLeft.push(w);
@@ -728,7 +730,7 @@ function playoffPicture(season, sims, forced, focus, opts) {
   // Remaining strength of schedule: average opponent scoring mean, ranked
   const sos = {}; uids.forEach(u => { const opp = sched.filter(g => g.a === u || g.b === u).map(g => g.a === u ? g.b : g.a); sos[u] = opp.length ? { avg: opp.reduce((a, o) => a + model[o].mean, 0) / opp.length, n: opp.length, opps: opp } : null; });
   const sosRank = {}; uids.filter(u => sos[u]).sort((a, b) => sos[b].avg - sos[a].avg).forEach((u, i) => { sosRank[u] = i + 1; });
-  let odds = null, stakes = null, ftal = null;
+  let odds = null, stakes = null, ftal = null, aWins = null;
   if (haveSchedule) {
     let seed = 12345; const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
     const gauss = () => { let a = 0, b = 0; while (!a) a = rnd(); while (!b) b = rnd(); return Math.sqrt(-2 * Math.log(a)) * Math.cos(2 * Math.PI * b); };
@@ -739,10 +741,16 @@ function playoffPicture(season, sims, forced, focus, opts) {
     const cond = {}; uids.forEach(u => { cond[u] = { w: { n: 0, po: 0, last: 0 }, l: { n: 0, po: 0, last: 0 } }; });
     const wonNext = {};
     ftal = focus ? sched.map(() => ({ an: 0, ap: 0, bn: 0, bp: 0 })) : null;
+    // Injuries are drawn for every week left (playoffs too) in every caller, so the Standings odds and Exodus see the same seasons
+    const injW = RE ? RE.weeks : null;
+    aWins = sched.map(() => 0);
     for (let i = 0; i < sims; i++) {
       const w = {}, pf = {}; uids.forEach(u => { w[u] = st[u].w; pf[u] = st[u].pf; });
       const res = focus ? [] : null;
-      sched.forEach((g, gi) => { let sa = model[g.a].mean + model[g.a].sd * gauss(), sb = model[g.b].mean + model[g.b].sd * gauss();
+      const inj = RE ? RE.draw(rnd, injW) : null; if (injList) injList.push(inj);
+      const mu = (u, wk) => (RE ? RE.mean(u, wk, inj) : model[u].mean);
+      sched.forEach((g, gi) => { let sa = mu(g.a, g.w) + model[g.a].sd * gauss(), sb = mu(g.b, g.w) + model[g.b].sd * gauss();
+        if (sa > sb) aWins[gi]++;
         // A locked result: keep both scores, swap them if the wrong team won, so points for stays realistic
         if (F) { const f = F[gKey(g)]; if ((f === g.a && sb > sa) || (f === g.b && sa >= sb)) { const t = sa; sa = sb; sb = t; } }
         if (res) res[gi] = sa > sb;
@@ -763,7 +771,9 @@ function playoffPicture(season, sims, forced, focus, opts) {
       stakes.cond[u] = { winPo: wPo, lossPo: lPo, winLast: fx(c.w, "last"), lossLast: fx(c.l, "last"), winShare: c.w.n / (c.w.n + c.l.n) }; });
   }
   const focusGames = odds && focus ? sched.map((g, gi) => { const c = ftal[gi]; return { g, key: gKey(g), aPo: c.an ? c.ap / c.an : null, bPo: c.bn ? c.bp / c.bn : null }; }) : null;
-  return { regLeft, status, odds, stakes, sos, sosRank, haveSchedule, byes: season.byes != null ? season.byes : (P === 6 ? 2 : 0), model, sched, gKey, focusGames, orders };
+  // Each game's lean straight from the simulations (before any locked result), so roster strength, byes, and injuries are in it
+  const lean = odds && !F && aWins ? {} : null; if (lean) sched.forEach((g, gi) => { lean[gKey(g)] = aWins[gi] / sims; });
+  return { regLeft, status, odds, stakes, sos, sosRank, haveSchedule, byes: season.byes != null ? season.byes : (P === 6 ? 2 : 0), model, sched, gKey, focusGames, orders, injuries: injList, roster: !!RE, lean };
 }
 
 
@@ -2424,7 +2434,10 @@ function wTeam(W, tm) {
   }
 
   /* ---------- What's at Stake: next week's games, from things Sleeper does not show ---------- */
-  const ppOf = s => (st.ppCache[s.year] = st.ppCache[s.year] || playoffPicture(s));
+  // The current season uses the roster engine (today's rosters, injuries, fill-ins); finished seasons and missing data use team scoring history
+  const rosterFor = s => (st.model && s === st.model.latest ? exodusData(true) : null);
+  // With rosters it also keeps each simulation's playoff field and injuries, so Exodus scores the same seasons without a second run
+  const ppOf = s => { if (st.ppCache[s.year]) return st.ppCache[s.year]; const R = rosterFor(s); return (st.ppCache[s.year] = playoffPicture(s, null, null, null, R ? { roster: R, orders: true } : {})); };
   function stakesData(s) {
     if (st.stakeCache[s.year] !== undefined) return st.stakeCache[s.year];
     const pp = ppOf(s);
@@ -2507,7 +2520,7 @@ function wTeam(W, tm) {
       h += `</tbody></table></div><p class="stakes sm"><b>Playoff odds and schedule strength are waiting on data.</b> They need the remaining schedule, which the updated export now collects. Run the export again and they turn on.</p>`;
     }
     if (pp.odds && s === st.model.latest) h += `<div class="linkwrap"><button type="button" class="go-btn" data-go="land" data-sec="">Pick the games yourself in The Promised Land</button></div>`;
-    h += `<details class="explain"><summary>How the playoff picture works</summary>${pp.odds ? `<p>Playoff odds come from 10,000 simulations of the rest of the regular season. Each team's weekly score is drawn from its own scoring so far, pulled slightly toward the league average because a few weeks is a small sample. Ties in the standings go to points for, the league's tiebreaker.</p><p>Schedule ranks each team's remaining opponents by how much they score: 1st is the toughest road left, ${ordinal(s.uids.length)} the easiest. Proj W is the average final win total across the simulations.</p>` : ""}<p>Clinched and Eliminated are exact, not simulated. Clinched means no combination of results can push the team out of the top ${s.playoffTeams}. Eliminated means at least ${s.playoffTeams} teams are already guaranteed to finish ahead.</p><p>Magic is the magic number: how many more wins guarantee a spot no matter what anyone else does. A team that ties on wins counts as a threat, because points for are not settled yet. Needs help means even winning out does not guarantee it.</p></details>`;
+    h += `<details class="explain"><summary>How the playoff picture works</summary>${pp.odds ? `<p>Playoff odds come from 10,000 simulations of the rest of the regular season. ${pp.roster ? `Each team's weekly score starts from its roster today: the best lineup it can set that week, with NFL byes and the commissioner's return calls. In every simulation, players can get hurt at the rate their position does in the NFL (about 4% a game, 2023 to 2025) and miss a realistic number of games. A player who is out today finishes his absence first. When nobody on the roster can fill a spot, the team uses a fill-in from waivers worth that position's waiver-wire average, never a zero. No one is promised tomorrow, and no starter is promised Sunday. The spread comes from each team's own scores so far.` : `Each team's weekly score is drawn from its own scoring so far, pulled slightly toward the league average because a few weeks is a small sample.`} Ties in the standings go to points for, the league's tiebreaker.</p><p>Schedule ranks each team's remaining opponents by how much they score: 1st is the toughest road left, ${ordinal(s.uids.length)} the easiest. Proj W is the average final win total across the simulations.</p>` : ""}<p>Clinched and Eliminated are exact, not simulated. Clinched means no combination of results can push the team out of the top ${s.playoffTeams}. Eliminated means at least ${s.playoffTeams} teams are already guaranteed to finish ahead.</p><p>Magic is the magic number: how many more wins guarantee a spot no matter what anyone else does. A team that ties on wins counts as a threat, because points for are not settled yet. Needs help means even winning out does not guarantee it.</p></details>`;
     return h;
   }
 
@@ -3838,19 +3851,32 @@ function wTeam(W, tm) {
   // using the player's 2026 average with or without him, pulled to his season average by 4 games, held to 0.6x to 1.6x.
   const EX_SHARE = 0.18, EX_KC = 4, EX_CTX = [0.6, 1.6];
   const EX_KW = 3, EX_KP = 2, EX_KD = 8, EX_CLIP = [0.8, 1.2], EX_SOFT = 1.06, EX_HARD = 0.94, EX_FUT = 0.25, EX_HURT = 1.25, EX_N = 10000;
+  // Injuries and fill-ins (Benton, Nov 20 2026; locked, reviewed once a year at most). tools/injury_fill.py on nflverse 2023-2025.
+  // INJ_RATE[pos].h: chance a fantasy-relevant player who plays a game misses his team's next game hurt (Out, Doubtful, or reserve).
+  // INJ_RATE[pos].d: games missed, P(1..8 games) then the rest of the season; Kaplan-Meier for spells cut off at Week 18,
+  // grouped 1, 2, 3-4, 5-8, 9+ and pulled toward all four positions with 100 spells of weight. Byes do not count as games missed.
+  const INJ_RATE = { QB: { h: 0.0403, d: [0.3191, 0.1212, 0.0958, 0.0958, 0.0228, 0.0228, 0.0228, 0.0228, 0.2767] }, RB: { h: 0.038, d: [0.2746, 0.1768, 0.1026, 0.1026, 0.0307, 0.0307, 0.0307, 0.0307, 0.2204] }, WR: { h: 0.0415, d: [0.3425, 0.172, 0.0894, 0.0894, 0.0287, 0.0287, 0.0287, 0.0287, 0.192] }, TE: { h: 0.0405, d: [0.2967, 0.1558, 0.0843, 0.0843, 0.0476, 0.0476, 0.0476, 0.0476, 0.1887] } };
+  // Fill-in player: what a manager can get off waivers. Per-game average in league scoring of the players ranked just past what
+  // the league rosters (ranks N+1 to N+5; N = QB 18, RB 52, WR 59, TE 21, K 12, DEF 16), 2023-2025; DEF from 2026 league games.
+  // A lineup slot takes the fill-in whenever no healthy rostered player beats it (injury, bye, or an empty spot). No limit per team.
+  const FILL_IN = { QB: 18.6, RB: 6.9, WR: 9.3, TE: 8.5, K: 8.5, DEF: 6.8 };
   const nflWeek = w => { const g = NFL26[w]; if (!g) return null; const m = {}; g.split(" ").forEach(x => { const [a, h] = x.split("@"); m[a] = { opp: h, home: false }; m[h] = { opp: a, home: true }; }); return m; };
 
-  function exodusData() {
-    if (st.exCache !== undefined) return st.exCache;
+  // exodusData(true) stops after the roster engine (curves, injuries, fill-ins), which the Playoff Picture uses for the weeks left.
+  function exodusData(baseOnly) {
+    if (baseOnly && st.exEngine !== undefined) return st.exEngine;
+    if (!baseOnly && st.exCache !== undefined) return st.exCache;
     const M = st.model, s = M.latest, proj = M.projections;
     const pw = [s.pws, s.pws + 1, s.pws + 2], lastW = s.regWeeks[s.regWeeks.length - 1] || 0;
-    if (s.complete || !proj || String(proj.season) !== String(s.year) || !proj.act || !s.regWeeks.length || lastW >= s.pws || !NFL26[pw[2]]) return (st.exCache = null);
+    if (s.complete || !proj || String(proj.season) !== String(s.year) || !proj.act || !s.regWeeks.length || lastW >= s.pws || !NFL26[pw[2]]) { st.exEngine = null; return (st.exCache = null); }
+    const regLeft = []; for (let w = lastW + 1; w < s.pws; w++) regLeft.push(w);
+    const allW = regLeft.concat(pw);
     const P = M.players || {}, A = proj.act, U = (proj.usage && proj.usage.weeks) || {}, INJ = M.injuries || {};
     const posOf = pid => { const p = String((P[pid] || [])[1] || "").toUpperCase(); return p === "FB" ? "RB" : p; };
     const teamNow = pid => (posOf(pid) === "DEF" ? pid : (P[pid] || [])[2] || "");
     const nameOf = pid => (posOf(pid) === "DEF" ? nfl(pid) + " defense" : (P[pid] || [pid])[0]);
     const wk = Object.keys(A).map(Number).filter(w => w <= lastW && NFL26[w]).sort((a, b) => a - b);
-    const sch = {}; wk.concat(pw).forEach(w => { sch[w] = nflWeek(w); });
+    const sch = {}; wk.concat(allW).forEach(w => { sch[w] = nflWeek(w); });
     const played = {}; Object.entries(U).forEach(([w, rows]) => Object.values(rows).forEach(r => { if (r && r[0]) (played[r[0]] = played[r[0]] || new Set()).add(+w); }));
     const tmAt = (pid, w) => { const ps = posOf(pid); if (ps === "K" || ps === "DEF") { const t = teamNow(pid); return played[t] && played[t].has(w) ? t : null; } const u = (U[w] || {})[pid]; return u && u[1] > 0 ? u[0] : null; };
     const mean = x => x.reduce((p, q) => p + q, 0) / x.length;
@@ -3917,7 +3943,7 @@ function wTeam(W, tm) {
       const sp = pr0.cv * mu, so = n > 1 ? sdv(v) : sp;
       const sd = Math.sqrt((n * so * so + VG_KS * sp * sp) / (n + VG_KS)) * VG_WIDEN * (hurt ? EX_HURT : 1);
       const skew = ps !== "K" && ps !== "DEF", cv = sd / mu, ls = skew ? Math.sqrt(Math.log(1 + cv * cv)) : 0;
-      const team = teamNow(pid), weeks = pw.map(w => {
+      const team = teamNow(pid), wkEntry = w => {
         const g = team && sch[w] && sch[w][team];
         if (!availIn(pid, w)) return { w, mu: 0, out: true, call: calls[pid] };
         if (!g) return { w, mu: 0, bye: true };
@@ -3925,9 +3951,95 @@ function wTeam(W, tm) {
         const fx = factor(g.opp, ps), fp = fut[w] && fut[w][pid] > 0 ? fut[w][pid] : null;
         const base = mu * cr * fx.f, m = fp != null ? (1 - EX_FUT) * base + EX_FUT * fp : base, flat = fp != null ? (1 - EX_FUT) * mu * cr + EX_FUT * fp : mu * cr;
         return { w, mu: m, flat, opp: g.opp, home: g.home, f: fx.f, fp, ctx };
-      });
-      return (curves[pid] = { pid, pos: ps, team, n, mu, own, wx, pj, cv, ls, skew, dud: skew ? pr0.dud : 0, hurt, q: inj === "Questionable", thin, call: calls[pid] || null, weeks });
+      };
+      const weeks = pw.map(wkEntry), byW = {}; regLeft.forEach(w => { byW[w] = wkEntry(w); }); pw.forEach((w, k) => { byW[w] = weeks[k]; });
+      return (curves[pid] = { pid, pos: ps, team, n, mu, own, wx, pj, cv, ls, skew, dud: skew ? pr0.dud : 0, hurt, q: inj === "Questionable", thin, call: calls[pid] || null, weeks, byW });
     };
+
+    // Roster engine (Benton, Nov 20): every week left, regular season and playoffs, scored from today's rosters.
+    // Random injuries by position (INJ_RATE). A player Out, Doubtful, or on reserve today draws his total absence from the same table,
+    // given the team games he has already missed since his last 2026 game (IR and PUP: at least 4 games in all).
+    // Commissioner's calls set the return week and take no random draw before it. Questionable counts as healthy.
+    // A slot takes the fill-in player (FILL_IN) whenever no healthy rostered player beats him.
+    const OUT_NOW = new Set(VG_SAT), INJ_POS = ["QB", "RB", "WR", "TE"];
+    const fillC = {}; VG_POS.forEach(ps => { const pr0 = prior[ps], mu = FILL_IN[ps], cv = pr0.cv * VG_WIDEN, skew = ps !== "K" && ps !== "DEF";
+      fillC[ps] = { pid: "fill:" + ps, pos: ps, team: "", fill: true, mu, cv, ls: skew ? Math.sqrt(Math.log(1 + cv * cv)) : 0, skew, dud: skew ? pr0.dud : 0 }; });
+    const engine = (() => {
+      const roster = {}, allCurves = [];
+      s.uids.forEach(u => { roster[u] = (s.currentRosters[u] || []).map(curveOf).filter(Boolean); allCurves.push(...roster[u]); });
+      const mOf = (c, w) => { const x = c.byW[w]; return x && !x.out && !x.bye ? x.mu : 0; };
+      const plays = (c, w) => !!(c.team && sch[w] && sch[w][c.team]) && availIn(c.pid, w);
+      const lens = r => r.d.map((q, i) => ({ L: i === r.d.length - 1 ? 99 : i + 1, q }));
+      const missedSince = c => { let last = 0; wk.forEach(w => { const r = (U[w] || {})[c.pid]; if (r && r[1] > 0) last = w; }); const g = played[c.team]; return wk.filter(w => w > last && g && g.has(w)).length; };
+      const owner = {}; s.uids.forEach(u => roster[u].forEach(c => { owner[c.pid] = u; }));
+      const lq = {}; INJ_POS.forEach(ps => { lq[ps] = Math.log(1 - INJ_RATE[ps].h); });
+      const risk = allCurves.filter(c => INJ_POS.includes(c.pos)).map(c => {
+        const stt = (INJ[c.pid] || {}).s, now = !c.call && OUT_NOW.has(stt), r = { ...INJ_RATE[c.pos], lq: lq[c.pos] };
+        if (!now) return { c, now, r, opts: lens(r) };
+        const missed = missedSince(c), minL = Math.max(missed + 1, stt === "IR" || stt === "PUP" ? 4 : 1);
+        let opts = lens(r).filter(o => o.L >= minL); const tot = opts.reduce((a, o) => a + o.q, 0) || 1; opts = opts.map(o => ({ L: o.L === 99 ? 99 : o.L - missed, q: o.q / tot }));
+        return { c, now, r, opts, missed };
+      });
+      const pickLen = (rnd, opts) => { let x = rnd(); for (const o of opts) { x -= o.q; if (x < 0) return o.L; } return opts[opts.length - 1].L; };
+      const fresh = {}; INJ_POS.forEach(ps => { fresh[ps] = lens(INJ_RATE[ps]); });
+      // One season of injuries: Map pid -> Set of weeks he misses
+      const playW = new Map();  // weeks list -> each risk entry's weeks with a game he is cleared for
+      const draw = (rnd, weeks) => {
+        let pw0 = playW.get(weeks); if (!pw0) { pw0 = risk.map(e => weeks.filter(w => plays(e.c, w))); playW.set(weeks, pw0); }
+        // Same as a coin flip after every game he plays, drawn as the number of healthy games before the next injury (geometric)
+        const out = new Map(); out.teams = new Map();
+        for (let k = 0; k < risk.length; k++) {
+          const { c, now, r, opts } = risk[k], ws = pw0[k], n = ws.length; if (!n) continue;
+          let j = 0, set = null;
+          const mark = L => { const e = Math.min(n, j + L); if (e > j) set = set || new Set(); for (; j < e; j++) set.add(ws[j]); };
+          if (now) mark(pickLen(rnd, opts));
+          while (j < n - 1) {
+            const g = Math.floor(Math.log(1 - rnd()) / r.lq);
+            if (j + g >= n - 1) break;
+            j += g + 1; mark(pickLen(rnd, fresh[c.pos]));
+          }
+          if (set) { out.set(c.pid, set); const u = owner[c.pid], a = out.teams.get(u); if (a) a.push(c.pid); else out.teams.set(u, [c.pid]); }
+        }
+        return out;
+      };
+      // Best lineup for one week given who is out; fill-ins are always available
+      // Per team and week: rostered options sorted once, and each slot's best fill-in, so a simulation only skips the injured
+      const slotFill = s.slotOrder.map(i => { let f = null; s.slotElig[i].forEach(ps => { if (fillC[ps] && (!f || fillC[ps].mu > f.mu)) f = fillC[ps]; }); return f; });
+      const sorted = {};
+      const optsOf = (u, w) => { const k = u + "|" + w; return sorted[k] || (sorted[k] = roster[u].filter(c => mOf(c, w) > 0).map(c => ({ c, m: mOf(c, w) })).sort((a, b) => b.m - a.m)); };
+      const pick = (u, w, out) => {
+        const avail = optsOf(u, w), used = new Set(), L = [];
+        s.slotOrder.forEach((i, j) => {
+          const el = s.slotElig[i], f = slotFill[j];
+          let o = null; for (const x of avail) { if (used.has(x.c.pid) || !el.has(x.c.pos)) continue; if (out) { const z = out.get(x.c.pid); if (z && z.has(w)) continue; } o = x; break; }
+          if (o && (!f || o.m >= f.mu)) { used.add(o.c.pid); L.push({ c: o.c, m: o.m, x: o.c.byW[w] }); }
+          else if (f) L.push({ c: f, m: f.mu, x: null });
+        });
+        return L;
+      };
+      // Lineups remembered by who on the team is out that week, since the same few absences repeat across simulations
+      const memo = {};
+      const lineup = (u, w, out) => {
+        let key = u + "|" + w; const hurt = out && out.teams.get(u);
+        if (hurt) for (const pid of hurt) { if (out.get(pid).has(w)) key += "|" + pid; }
+        return memo[key] || (memo[key] = pick(u, w, out));
+      };
+      const raw = (u, w, out) => lineup(u, w, out).reduce((a, e) => a + e.m, 0);
+      // Best-lineup means run above what teams really score (managers do not start the best lineup every week, projections lean high).
+      // One league-wide factor brings them to the league's 2026 scoring level: actual average per team-week over the
+      // average roster mean in 300 simulated injury seasons for the regular weeks left. Every team gets the same factor.
+      let scale = 1;
+      if (regLeft.length) {
+        const tw = s.teamWeeks.filter(t => t.game && t.game.kind === "regular"), act = tw.length ? tw.reduce((a, t) => a + t.pts, 0) / tw.length : 0;
+        let seed0 = 777, sum = 0, n = 0; const r0 = () => { seed0 = (seed0 * 1664525 + 1013904223) % 4294967296; return seed0 / 4294967296; };
+        for (let i = 0; i < 300; i++) { const o = draw(r0, allW); s.uids.forEach(u => regLeft.forEach(w => { sum += raw(u, w, o); n++; })); }
+        if (act > 0 && n) scale = act / (sum / n);
+      }
+      const mean = (u, w, out) => scale * raw(u, w, out);
+      return { weeks: allW, regLeft, pw, draw, lineup, mean, raw, scale, allCurves, fillC };
+    })();
+    st.exEngine = engine;
+    if (baseOnly) return engine;
 
     // Best legal lineup for each team in each playoff week
     const slotName = i => { const e = s.slotElig[i]; return e.size === 1 ? [...e][0] : "FLEX"; };
@@ -3949,20 +4061,21 @@ function wTeam(W, tm) {
     let sim = null;
     const P6 = s.playoffTeams === 6;
     if (P6) {
-      const pp = playoffPicture(s, EX_N, null, null, { orders: true });
+      const pp = ppOf(s);  // EX_N simulations, with each one's playoff field and injuries
       const orders = pp.orders && pp.orders.length ? pp.orders : [s.standings.slice(0, 6).map(r => r.uid)];
       let seed = 20261117;
       const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
       const gauss = () => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
       const L = {}; rows.forEach(r => { L[r.uid] = r.lu; });
       const cnt = {}; s.uids.forEach(u => { cnt[u] = { po: 0, bye: 0, fin: 0, title: 0 }; });
-      // One correlated draw per playoff week for every starter in the league, so a shootout lifts both sides of that NFL game
-      const wIdx = pw.map(() => new Map()), wSamp = pw.map((w, k) => { const list = []; rows.forEach(r => r.lu[k].forEach(e => { if (!e.x.mu || wIdx[k].has(e.c.pid)) return; wIdx[k].set(e.c.pid, list.length); list.push({ pos: e.c.pos, team: e.c.team, opp: e.x.opp }); })); return corrSampler(list); });
-      let zt;
-      const score = (u, k) => { let t = 0; const z = zt[k] || (zt[k] = wSamp[k](gauss)), ix = wIdx[k]; L[u][k].forEach(e => { const c = e.c, m = e.x.mu; if (!m) return; if (c.dud && rnd() < c.dud) { t += rnd() * 0.25 * m; return; } const q = z[ix.get(c.pid)]; t += c.skew ? m * Math.exp(c.ls * q - c.ls * c.ls / 2) : Math.max(c.pos === "DEF" ? -10 : 0, m + c.cv * m * q); }); return t; };
+      // One correlated draw per playoff week for every rostered player in the league, so a shootout lifts both sides of that NFL game.
+      // Lineups come from the roster engine with that simulation's injuries (the same ones its regular season used); fill-ins draw alone.
+      const wIdx = pw.map(() => new Map()), wSamp = pw.map((w, k) => { const list = []; engine.allCurves.forEach(c => { const x = c.byW[w]; if (!x || !x.mu || x.out || x.bye || wIdx[k].has(c.pid)) return; wIdx[k].set(c.pid, list.length); list.push({ pos: c.pos, team: c.team, opp: x.opp }); }); return corrSampler(list); });
+      let zt, injNow = null;
+      const score = (u, k) => { let t = 0; const z = zt[k] || (zt[k] = wSamp[k](gauss)), ix = wIdx[k]; engine.lineup(u, pw[k], injNow).forEach(e => { const c = e.c, m = e.m; if (!m) return; if (c.dud && rnd() < c.dud) { t += rnd() * 0.25 * m; return; } const q = c.fill ? gauss() : z[ix.get(c.pid)]; t += c.skew ? m * Math.exp(c.ls * q - c.ls * c.ls / 2) : Math.max(c.pos === "DEF" ? -10 : 0, m + c.cv * m * q); }); return t; };
       const play = (a, b, k) => { const x = score(a, k), y = score(b, k); return x > y ? a : y > x ? b : (rnd() < 0.5 ? a : b); };
       for (let i = 0; i < EX_N; i++) {
-        const o = orders[i % orders.length]; zt = [null, null, null];
+        const o = orders[i % orders.length]; zt = [null, null, null]; injNow = (pp.injuries && pp.injuries[i % orders.length]) || null;
         o.forEach((u, j) => { cnt[u].po++; if (j < 2) cnt[u].bye++; });
         const w36 = play(o[2], o[5], 0), w45 = play(o[3], o[4], 0);
         const fa = play(o[0], w45, 1), fb = play(o[1], w36, 1);
@@ -3985,7 +4098,7 @@ function wTeam(W, tm) {
     const oPct = v => (v >= 0.995 ? (v === 1 ? "In" : ">99%") : v < 0.005 ? (v > 0 ? "<1%" : "0%") : Math.round(v * 100) + "%");
     const wcls = k => (k <= 3 ? "w" : k > N - 3 ? "l" : "");
     let h = sec("Exodus", `Playoff power rankings: who is built for Weeks ${X.pw[0]}, ${X.pw[1]}, and ${X.pw[2]}, the road to the championship.`);
-    h += `<details class="explain ex-info"><summary>How Exodus works</summary><p>Each team's best starting lineup for each playoff week, from today's roster. A player's number starts with his 2026 average in league scoring, first downs included. For backs, receivers, and tight ends it leans on his Workload points, and for everyone on this week's Sleeper projection. Then it moves with that week's NFL opponent: how many points that defense has given up to his position this year, pulled toward average because ten games is a small sample.${X.hasFut ? " Sleeper's own projection for that week counts for a quarter." : ""}</p><p>Players on the prayer list (Out, IR, Doubtful, and the rest) count as healthy, because whoever holds them is counting on them for the playoffs. Their numbers carry a wider spread, and the team carries a tag. For those numbers to hold, the man has to get healthy first. The exception is a commissioner's call: when a return week is set for a key player, he sits until that week and the next man up starts.</p><p>Teammates matter too. When a teammate with a big role (18% or more of his team's targets and carries, or a starting quarterback ruled out) will be on or off the field in a playoff week, a player's number uses his 2026 average with or without that teammate, pulled toward his season average because the samples are small.</p>${X.sim ? `<p>Title odds: 10,000 runs. Each run first plays out the rest of the regular season, the same way the Playoff Picture does, to set that run's six seeds. Seeds 1 and 2 sit out Week ${X.pw[0]}. Then each playoff game in that run is played out from every starter's own range of scores, with the same Monday Night Vigil curves, so upsets happen as often as they should. Players in the same NFL game move together: a quarterback and his receivers rise and fall as a pair, two receivers on one team barely move together, and a defense sinks when its opponent's offense has a big day. One game is a coin with a weight on it, so read these as odds, not a verdict.</p>` : ""}</details>`;
+    h += `<details class="explain ex-info"><summary>How Exodus works</summary><p>Each team's best starting lineup for each playoff week, from today's roster. A player's number starts with his 2026 average in league scoring, first downs included. For backs, receivers, and tight ends it leans on his Workload points, and for everyone on this week's Sleeper projection. Then it moves with that week's NFL opponent: how many points that defense has given up to his position this year, pulled toward average because ten games is a small sample.${X.hasFut ? " Sleeper's own projection for that week counts for a quarter." : ""}</p><p>Players on the prayer list (Out, IR, Doubtful, and the rest) count as healthy, because whoever holds them is counting on them for the playoffs. Their numbers carry a wider spread, and the team carries a tag. For those numbers to hold, the man has to get healthy first. The exception is a commissioner's call: when a return week is set for a key player, he sits until that week and the next man up starts.</p><p>Teammates matter too. When a teammate with a big role (18% or more of his team's targets and carries, or a starting quarterback ruled out) will be on or off the field in a playoff week, a player's number uses his 2026 average with or without that teammate, pulled toward his season average because the samples are small.</p>${X.sim ? `<p>Title odds: 10,000 runs. Each run first plays out the rest of the regular season, the same way the Playoff Picture does, to set that run's six seeds. Seeds 1 and 2 sit out Week ${X.pw[0]}. Each run carries its own injuries from the regular season into the playoffs, and a hurt starter's spot goes to the best healthy bench player or a fill-in from waivers. Then each playoff game in that run is played out from every starter's own range of scores, with the same Monday Night Vigil curves, so upsets happen as often as they should. Players in the same NFL game move together: a quarterback and his receivers rise and fall as a pair, two receivers on one team barely move together, and a defense sinks when its opponent's offense has a big day. One game is a coin with a weight on it, so read these as odds, not a verdict.</p>` : ""}</details>`;
     if (X.sim) h += `<div class="chips" role="group" aria-label="Exodus order"><button data-exsort="title" aria-pressed="${by === "title"}">Title odds</button><button data-exsort="str" aria-pressed="${by === "str"}">Playoff strength</button></div>`;
     h += `<div class="scroll"><table class="data ex-t" data-hide="${X.sim ? "5,6,7,8" : "4"}"><thead><tr><th>Team</th>${X.pw.map(w => `<th>Wk ${w}</th>`).join("")}${X.sim ? "<th>Title</th>" : ""}<th>Slate</th>${X.sim ? "<th>Final</th><th>Playoffs</th><th>Bye</th>" : ""}</tr></thead><tbody>`;
     rows.forEach((r, i) => {
@@ -4338,10 +4451,10 @@ function wTeam(W, tm) {
   const landSave = L => store.set(L.key, Object.keys(L.picks).length ? JSON.stringify(L.picks) : null);
   // One game's lean from the same scoring model the simulation uses
   const normCdf = z => { const t = 1 / (1 + 0.2316419 * Math.abs(z)), d = 0.3989423 * Math.exp(-z * z / 2), p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))); return z > 0 ? 1 - p : p; };
-  const leanA = (pp, g) => { const A = pp.model[g.a], B = pp.model[g.b]; return normCdf((A.mean - B.mean) / Math.sqrt(A.sd * A.sd + B.sd * B.sd)); };
+  const leanA = (pp, g) => { if (pp.lean && pp.lean[pp.gKey(g)] != null) return pp.lean[pp.gKey(g)]; const A = pp.model[g.a], B = pp.model[g.b]; return normCdf((A.mean - B.mean) / Math.sqrt(A.sd * A.sd + B.sd * B.sd)); };
   function landRun(s, L) {
     const team = L.team || s.uids[0], k = team + "|" + JSON.stringify(Object.entries(L.picks).sort());
-    if (!L.cache[k]) { const ks = Object.keys(L.cache); if (ks.length > 30) delete L.cache[ks[0]]; L.cache[k] = playoffPicture(s, LAND_SIMS, L.picks, team); }
+    if (!L.cache[k]) { const ks = Object.keys(L.cache); if (ks.length > 30) delete L.cache[ks[0]]; L.cache[k] = playoffPicture(s, LAND_SIMS, L.picks, team, { roster: rosterFor(s) }); }
     return L.cache[k];
   }
   function landPreset(s, L, kind) {
@@ -4370,7 +4483,7 @@ function wTeam(W, tm) {
     let h = sec("The Promised Land", `Pick any games. We play out the rest ${LAND_SIMS.toLocaleString()} times. "Be strong and courageous." Joshua 1:9.`);
     h += `<details class="vg-info"><summary><span class="vg-i" aria-hidden="true">i</span>How the simulator works</summary><div class="vg-info-b">
 <p><b>Your picks are locked.</b> Tap a team to make him win that game. Tap again to unlock it. Every game you leave open is simulated.</p>
-<p><b>Open games.</b> Each team's weekly score is drawn from its own scoring this season, pulled a little toward the league average. That is the same model as the Playoff Picture. The percentage on each button is that model's lean for the single game.</p>
+<p><b>Open games.</b> Each team's weekly score comes from its roster that week, with byes, random injuries, and fill-ins from waivers. That is the same model as the Playoff Picture. The percentage on each button is that model's lean for the single game.</p>
 <p><b>Tiebreaker.</b> Ties in the standings go to points for, the league's tiebreaker. A locked game still gets realistic scores, so points for keeps moving.</p>
 <p><b>In and Out.</b> These are exact, not simulated. With your picks, In means no combination of the open games can knock him out, and Out means he cannot get in.</p>
 <p><b>The arrows</b> show the change from today's odds, in percentage points. Lid odds are last place in the regular season, which puts a team on the road to the toilet bowl.</p>
@@ -4649,7 +4762,7 @@ function wTeam(W, tm) {
 
   function start(raw) {
     st.raw = raw;
-    Object.assign(st, { land: null, vigilCache: null, exCache: undefined, gCache: {}, ppCache: {}, stakeCache: {}, dCache: {}, scaleCache: {}, ideaCache: {}, mtRes: null, multi: null });
+    Object.assign(st, { land: null, vigilCache: null, exCache: undefined, exEngine: undefined, gCache: {}, ppCache: {}, stakeCache: {}, dCache: {}, scaleCache: {}, ideaCache: {}, mtRes: null, multi: null });
     st.model = buildLeague(raw); st.pIdx = undefined; st.prCache = null; st.wk = undefined;
     Object.values(st.model.owners).forEach(o => { if (NICK[o.name]) { o.handle = o.name; o.name = NICK[o.name]; } });
     st.model.seasons.forEach(x => Object.keys(x.teamName).forEach(uid => { const o = st.model.owners[uid]; if (o && o.handle && x.teamName[uid] === o.handle) x.teamName[uid] = "Team " + o.name; }));
