@@ -47,6 +47,16 @@ const srv = http.createServer((q, r) => { const f = path.join(S, decodeURICompon
       s.slotOrder.forEach((i, j) => { const e = L[j]; if (!e || !e.c.fill) return; const el = s.slotElig[i], b0 = bench.find(c => el.has(c.pos)); if (b0) res.lineups.bad.push([u, w, "fill-in used with " + b0.pid + " on the bench"]); });
     })));
     res.scale = E.scale;
+    // Handcuffs: every table entry whose backup is rostered takes his "lead out" number (times the opponent factor) when the lead is out,
+    // stays put when the lead plays, and every lead (rostered or not) can be hurt in the simulations
+    res.hc = { n: 0, bad: [] };
+    E.hc.forEach(e => { const u = E.owner[e.cuff]; if (!E.riskIds.includes(e.lead)) res.hc.bad.push(["lead not simulated", e.lead]); if (!u) return;
+      const c = E.allCurves.find(x => x.pid === e.cuff);
+      E.weeks.filter(w => w >= (e.from || 0) && w <= (e.to || 99)).forEach(w => { const x = c.byW[w]; if (!x || x.bye || x.out || x.hc) return;
+        const out = new Map([[e.lead, new Set([w])]]); out.teams = new Map(); const b = E.boosted(u, w, out), got = b && b[e.cuff];
+        const best = Math.max(...E.hc.filter(f => f.cuff === e.cuff && f.lead === e.lead && w >= (f.from || 0) && w <= (f.to || 99)).map(f => f.out));
+        res.hc.n++; if (got == null || Math.abs(got - best * (x.f || 1)) > 0.01) res.hc.bad.push([e.cuff, w, got, best]);
+        if (E.boosted(u, w, null)) res.hc.bad.push([e.cuff, w, "boost with lead healthy"]); }); });
     return res;
   });
   let bad = 0;
@@ -55,6 +65,7 @@ const srv = http.createServer((q, r) => { const f = path.join(S, decodeURICompon
   Object.entries(o.hazard).forEach(([k, v]) => { if (Math.abs(v.spells1 - sp[k][0]) > 0.03 || Math.abs(v.spells2 - sp[k][1]) > 0.03) { bad++; console.log(k, "spell lengths OFF"); } });
   console.log("lineup slots", o.lineups.slots, "fill-ins used", o.lineups.fills, "problems", o.lineups.bad.length, JSON.stringify(o.lineups.bad.slice(0, 5)));
   console.log("league scale", o.scale.toFixed(4));
-  bad += o.lineups.bad.length;
+  console.log("handcuff cases", o.hc.n, "problems", o.hc.bad.length, JSON.stringify(o.hc.bad.slice(0, 5)));
+  bad += o.lineups.bad.length + o.hc.bad.length;
   await b.close(); srv.close(); process.exit(bad ? 1 : 0);
 });

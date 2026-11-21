@@ -43,8 +43,27 @@ for ps in POS:
     if abs(avg[ps] - X['posAvg'][ps]) > 1e-6: bad += 1; print('posAvg', ps, avg[ps], X['posAvg'][ps])
 pw = X['pw']; checked = 0
 import re, math
-calls = json.loads(re.sub(r'(\w+):', r'"\1":', re.search(r'const EX_CALLS = (\{.*?\});', src).group(1).replace('"2026"', '"S2026"')))['S2026']
+calls = json.loads(re.sub(r'(\w+):', r'"\1":', re.search(r'const EX_CALLS = (\{.*?\});', src, re.S).group(1).replace('"2026"', '"S2026"')))['S2026']
 avail = lambda pid, w: pid not in calls or w >= calls[pid]['back']
+# Handcuff table (Nov 20): parse the entries straight from the source
+def _objs(name):
+    blk = re.search(r'const ' + name + r' = \{ "2026": \[(.*?)\] \};', src, re.S).group(1)
+    out = []
+    for m in re.finditer(r'\{([^{}]*)\}', blk):
+        d = {}
+        for k, v in re.findall(r'(\w+): ("[^"]*"|[\d.]+)', m.group(1)): d[k] = v.strip('"') if v.startswith('"') else float(v)
+        out.append(d)
+    return out
+HCS, HCN = _objs('HANDCUFFS'), _objs('HC_NORM')
+inr = lambda e, w: w >= e.get('from', 0) and w <= e.get('to', 99)
+def hc_val(pid, w):
+    nm = None
+    for e in HCS:
+        if e['cuff'] == pid and 'norm' in e and inr(e, w): nm = e['norm']
+    for e in HCN:
+        if e['pid'] == pid and inr(e, w): nm = e['norm']
+    o = [e['out'] for e in HCS if e['cuff'] == pid and inr(e, w) and not avail(e['lead'], w)]
+    return max(o) if o else nm
 UF = pr['usage']['fields']; iT = UF.index('tgt'); iA = UF.index('att')
 tt = {}; on = {}
 for w in wk:
@@ -96,6 +115,8 @@ for r in X['rows']:
             base = mu * ctx(pid, pw[k]) * fac(S_[t][0], ps) if mu is not None else e['wmu']
             fp = (pr.get('future') or {}).get(str(pw[k]), {}).get(pid)
             wm = (0.75 * base + 0.25 * fp) if (fp and fp > 0 and mu is not None) else base
+            hv = hc_val(pid, pw[k])
+            if hv is not None: wm = hv * fac(S_[t][0], ps)
             if mu is not None and abs(mu - e['mu']) > 1e-6: bad += 1; print('mu', pid, mu, e['mu'])
             if abs(wm - e['wmu']) > 1e-6: bad += 1; print('wmu', pid, wm, e['wmu'])
             if S_[t][0] != e['opp']: bad += 1; print('opp', pid)
