@@ -4,6 +4,7 @@ Shipped changes to the Gambling Baptist app, newest first. Dates are when the ch
 History before Nov 18, 2026 was not logged here; see `git log` on `app-source` and the dated rules in `HANDOFF.md`.
 
 ## 2026-11-20
+- **Handcuff table additions:** Perine 13 with Chase Brown out, Singletary 12 with Skattebo out, and Green Bay with Jacobs out: Kaleb Johnson 11, Lloyd 8.5. All four are free agents now; they are in the table so a pickup before the playoffs counts.
 - **RB handcuffs in the roster engine.** When a lead back is out (random injury, a call, or no game), his handcuff plays to a reviewed "lead out" number for that week, whoever owns either man. Unrostered leads are in the injury draw. Denver and Arizona have role changes from Week 13. Table locked for the season (`HANDCUFFS`, `HC_NORM`); rebuilt each year around Week 11 with Benton's review. Rule for drafting it: RB2 +30%, RB3 +17% of the lead's points. Effect: title odds moved under 0.6 points for every team.
 - **Commissioner's call:** Davante Adams back Week 14 (was 13, same night).
 - **Commissioner's calls for every rostered injured player** (Walker 12, Jacobs 12, Wan'Dale Robinson 14, Harvey 13, Kincaid 12, Love 13, Croskey-Merritt 11, Omar Cooper 13, A.J. Brown 14, Addison 14, McGowan 13; Puka, Aiyuk, Maye out for the season).
