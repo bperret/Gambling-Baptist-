@@ -1,5 +1,5 @@
 
-const DYK_SEED = 54;
+const DYK_SEED = 55;
 // 2026 NFL regular season, weeks 1 to 17, away@home (nflverse schedule; Rams as LAR to match Sleeper). Exodus reads opponents from here.
 const NFL26 = {"1":"NE@SEA SF@LAR CHI@CAR TB@CIN NO@DET BUF@HOU BAL@IND CLE@JAX ATL@PIT NYJ@TEN ARI@LAC MIA@LV GB@MIN WAS@PHI DAL@NYG DEN@KC","2":"DET@BUF CAR@ATL NO@BAL MIN@CHI CIN@HOU PIT@NE GB@NYJ CLE@TB PHI@TEN JAX@DEN LV@LAC SEA@ARI WAS@DAL MIA@SF IND@KC NYG@LAR","3":"ATL@GB LAC@BUF CAR@CLE NYJ@DET HOU@IND NE@JAX KC@MIA TEN@NYG CIN@PIT SEA@WAS ARI@SF MIN@TB BAL@DAL LV@NO LAR@DEN PHI@CHI","4":"PIT@CLE IND@WAS TEN@BAL NE@BUF NYJ@CHI JAX@CIN DAL@HOU ARI@NYG LAR@PHI GB@TB MIA@MIN KC@LV LAC@SEA DEN@SF DET@CAR ATL@NO","5":"TB@DAL PHI@JAX CHI@GB CIN@MIA LV@NE MIN@NO CLE@NYJ IND@PIT HOU@TEN NYG@WAS DEN@LAC DET@ARI SF@SEA BAL@ATL BUF@LAR","6":"SEA@DEN HOU@JAX CHI@ATL BAL@CLE TEN@IND NYJ@NE NO@NYG CAR@PHI PIT@TB ARI@LAR LAC@KC BUF@LV DAL@GB WAS@SF","7":"NE@CHI PIT@NO SF@ATL CIN@BAL TB@CAR NYG@HOU IND@MIN MIA@NYJ CLE@TEN DEN@ARI GB@DET LAR@LV KC@SEA DAL@PHI","8":"CAR@GB BAL@BUF TEN@CIN ARI@DAL MIN@DET IND@JAX LV@NYJ CLE@PIT ATL@TB LAC@LAR KC@DEN NE@MIA PHI@WAS CHI@SEA","9":"JAX@BAL CIN@ATL DEN@CAR DAL@IND NYJ@KC DET@MIA CLE@NO NYG@PHI LAR@WAS HOU@LAC GB@NE ARI@SEA LV@SF TB@CHI BUF@MIN","10":"WAS@NYG NE@DET KC@ATL HOU@CLE MIN@GB MIA@IND CAR@NO BUF@NYJ JAX@TEN LAR@ARI SEA@LV SF@DAL PIT@CIN LAC@BAL","11":"IND@HOU MIA@BUF BAL@CAR NO@CHI TEN@DAL TB@DET ARI@KC JAX@NYG NYJ@LAC LV@DEN PIT@PHI MIN@SF CIN@WAS","12":"GB@LAR CHI@DET PHI@DAL KC@BUF DEN@PIT NO@CIN BAL@HOU NYG@IND TEN@JAX NYJ@MIA ATL@MIN NE@LAC WAS@ARI SEA@SF LV@CLE CAR@TB","13":"KC@LAR DET@ATL JAX@CHI CIN@CLE GB@NO SF@NYG LAC@TB WAS@TEN PHI@ARI MIA@DEN CAR@MIN BUF@NE HOU@PIT DAL@SEA","14":"MIN@NE TB@BAL NO@CAR ATL@CLE TEN@DET CHI@MIA DEN@NYJ IND@PHI HOU@WAS LAC@LV KC@CIN NYG@SEA LAR@SF BUF@GB PIT@JAX","15":"SF@LAC SEA@PHI CHI@BUF CIN@CAR MIA@GB JAX@HOU CLE@NYG BAL@PIT NO@TB IND@TEN ATL@WAS NYJ@ARI DAL@LAR DEN@LV DET@MIN NE@KC","16":"HOU@PHI GB@CHI BUF@DEN LAR@SEA TB@ATL CLE@BAL CIN@IND LAC@MIA WAS@MIN ARI@NO NE@NYJ CAR@PIT TEN@LV SF@KC JAX@DAL NYG@DET","17":"BAL@CIN NO@ATL SEA@CAR IND@CLE NYG@DAL WAS@JAX KC@LAC BUF@MIA DEN@NE MIN@NYJ LAR@TB PIT@TEN LV@ARI DET@CHI PHI@SF HOU@GB"};
 // League model built from the export file. Pure functions, no DOM.
@@ -3846,7 +3846,11 @@ function wTeam(W, tm) {
   // then 25% Sleeper's projection for that week when the export has one. Players on the prayer list count as healthy, with a wider spread.
   // Commissioner's calls (Benton): expected return week for key injured players. back 99 = out for the season.
   // Everyone else on the prayer list counts as healthy. Reviewed with Benton at every trade value update.
-  const EX_CALLS = { "2026": { "9493": { back: 16, set: "Nov 17" }, "4881": { back: 99, set: "Nov 17" }, "9226": { back: 99, set: "Nov 17" }, "12529": { back: 99, set: "Nov 17" }, "11564": { back: 99, set: "Nov 18" } } };
+  // Nov 20: Benton set a call for every rostered injured player (hard return week, no random draw before it); Puka moved to out for the season.
+  const EX_CALLS = { "2026": { "9493": { back: 99, set: "Nov 20" }, "4881": { back: 99, set: "Nov 17" }, "9226": { back: 99, set: "Nov 17" }, "12529": { back: 99, set: "Nov 17" }, "11564": { back: 99, set: "Nov 18" },
+    "8151": { back: 12, set: "Nov 20" }, "2133": { back: 13, set: "Nov 20" }, "5850": { back: 12, set: "Nov 20" }, "8126": { back: 14, set: "Nov 20" }, "12489": { back: 13, set: "Nov 20" },
+    "10236": { back: 12, set: "Nov 20" }, "13287": { back: 13, set: "Nov 20" }, "12533": { back: 11, set: "Nov 20" }, "13276": { back: 13, set: "Nov 20" }, "5859": { back: 14, set: "Nov 20" },
+    "9756": { back: 14, set: "Nov 20" }, "6803": { back: 99, set: "Nov 20" }, "13424": { back: 13, set: "Nov 20" } } };
   // Teammate context (Benton, Nov 17): a teammate with 18%+ of his team's targets and carries (or a starting QB with a call) changes a player's number,
   // using the player's 2026 average with or without him, pulled to his season average by 4 games, held to 0.6x to 1.6x.
   const EX_SHARE = 0.18, EX_KC = 4, EX_CTX = [0.6, 1.6];
@@ -3858,7 +3862,7 @@ function wTeam(W, tm) {
   const INJ_RATE = { QB: { h: 0.0403, d: [0.3191, 0.1212, 0.0958, 0.0958, 0.0228, 0.0228, 0.0228, 0.0228, 0.2767] }, RB: { h: 0.038, d: [0.2746, 0.1768, 0.1026, 0.1026, 0.0307, 0.0307, 0.0307, 0.0307, 0.2204] }, WR: { h: 0.0415, d: [0.3425, 0.172, 0.0894, 0.0894, 0.0287, 0.0287, 0.0287, 0.0287, 0.192] }, TE: { h: 0.0405, d: [0.2967, 0.1558, 0.0843, 0.0843, 0.0476, 0.0476, 0.0476, 0.0476, 0.1887] } };
   // Fill-in player: what a manager can get off waivers. Per-game average in league scoring of the players ranked just past what
   // the league rosters (ranks N+1 to N+5; N = QB 18, RB 52, WR 59, TE 21, K 12, DEF 16), 2023-2025; DEF from 2026 league games.
-  // A lineup slot takes the fill-in whenever no healthy rostered player beats it (injury, bye, or an empty spot). No limit per team.
+  // A lineup slot uses the fill-in only when no healthy rostered player can play it that week (injury, bye, or an empty spot). No limit per team.
   const FILL_IN = { QB: 18.6, RB: 6.9, WR: 9.3, TE: 8.5, K: 8.5, DEF: 6.8 };
   const nflWeek = w => { const g = NFL26[w]; if (!g) return null; const m = {}; g.split(" ").forEach(x => { const [a, h] = x.split("@"); m[a] = { opp: h, home: false }; m[h] = { opp: a, home: true }; }); return m; };
 
@@ -3960,7 +3964,8 @@ function wTeam(W, tm) {
     // Random injuries by position (INJ_RATE). A player Out, Doubtful, or on reserve today draws his total absence from the same table,
     // given the team games he has already missed since his last 2026 game (IR and PUP: at least 4 games in all).
     // Commissioner's calls set the return week and take no random draw before it. Questionable counts as healthy.
-    // A slot takes the fill-in player (FILL_IN) whenever no healthy rostered player beats him.
+    // Bench first (Benton, Nov 20): a slot takes the best healthy rostered player who can play it, even below waiver level.
+    // The fill-in player (FILL_IN) only plays when nobody on the roster can fill the slot that week (injury, bye, empty spot).
     const OUT_NOW = new Set(VG_SAT), INJ_POS = ["QB", "RB", "WR", "TE"];
     const fillC = {}; VG_POS.forEach(ps => { const pr0 = prior[ps], mu = FILL_IN[ps], cv = pr0.cv * VG_WIDEN, skew = ps !== "K" && ps !== "DEF";
       fillC[ps] = { pid: "fill:" + ps, pos: ps, team: "", fill: true, mu, cv, ls: skew ? Math.sqrt(Math.log(1 + cv * cv)) : 0, skew, dud: skew ? pr0.dud : 0 }; });
@@ -4012,7 +4017,7 @@ function wTeam(W, tm) {
         s.slotOrder.forEach((i, j) => {
           const el = s.slotElig[i], f = slotFill[j];
           let o = null; for (const x of avail) { if (used.has(x.c.pid) || !el.has(x.c.pos)) continue; if (out) { const z = out.get(x.c.pid); if (z && z.has(w)) continue; } o = x; break; }
-          if (o && (!f || o.m >= f.mu)) { used.add(o.c.pid); L.push({ c: o.c, m: o.m, x: o.c.byW[w] }); }
+          if (o) { used.add(o.c.pid); L.push({ c: o.c, m: o.m, x: o.c.byW[w] }); }
           else if (f) L.push({ c: f, m: f.mu, x: null });
         });
         return L;

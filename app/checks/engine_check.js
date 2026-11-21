@@ -1,7 +1,7 @@
 // Roster engine check (injuries and fill-ins). Usage: node checks/engine_check.js sim
 // 1. Simulated injury chance per game played, by position, lands within 0.006 of INJ_RATE.h (healthy players, 20,000 seasons).
 // 2. Simulated share of 1-game and 2-game absences (spells with 3+ games of room, so a cut-off cannot hide them) match INJ_RATE.d within 0.03.
-// 3. Every team-week lineup fills every starting slot, no slot scores zero, and no slot is below that slot's fill-in value.
+// 3. Every team-week lineup fills every starting slot and no slot scores zero. A fill-in plays only when no healthy rostered player is eligible (bench first).
 // 4. With nobody hurt, a team that has a healthy starter at every slot uses no fill-in.
 const { chromium } = require("playwright"), http = require("http"), fs = require("fs"), path = require("path");
 const S = process.argv[2] || "sim";
@@ -42,7 +42,9 @@ const srv = http.createServer((q, r) => { const f = path.join(S, decodeURICompon
       if (L.length !== nSlots) res.lineups.bad.push([u, w, "slots " + L.length]);
       L.forEach((e, j) => { if (!(e.m > 0)) res.lineups.bad.push([u, w, "zero " + (e.c.pid)]); if (e.c.fill) res.lineups.fills++; });
       // no slot below its fill-in: compare to that slot's eligible fill-ins
-      s.slotOrder.forEach((i, j) => { const e = L[j]; if (!e) return; let f = 0; s.slotElig[i].forEach(ps => { if (E.fillC[ps]) f = Math.max(f, E.fillC[ps].mu); }); if (e.m + 1e-9 < f) res.lineups.bad.push([u, w, "below fill " + e.c.pid + " " + e.m + " < " + f]); });
+      const used = new Set(L.filter(e => !e.c.fill).map(e => e.c.pid));
+      const bench = E.allCurves.filter(c => (s.currentRosters[u] || []).includes(c.pid) && !used.has(c.pid) && c.byW[w] && c.byW[w].mu > 0 && !c.byW[w].out && !c.byW[w].bye && !(out && out.get(c.pid) && out.get(c.pid).has(w)));
+      s.slotOrder.forEach((i, j) => { const e = L[j]; if (!e || !e.c.fill) return; const el = s.slotElig[i], b0 = bench.find(c => el.has(c.pos)); if (b0) res.lineups.bad.push([u, w, "fill-in used with " + b0.pid + " on the bench"]); });
     })));
     res.scale = E.scale;
     return res;
