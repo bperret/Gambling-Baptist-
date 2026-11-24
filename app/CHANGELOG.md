@@ -3,6 +3,10 @@
 Shipped changes to the Gambling Baptist app, newest first. Dates are when the change went live. Details live in `HANDOFF.md`; this file says what changed and why.
 History before Nov 18, 2026 was not logged here; see `git log` on `app-source` and the dated rules in `HANDOFF.md`.
 
+## 2026-11-23
+- **Week 11 final export** loaded by the commissioner through the drop zone (Did You Know bumped by the drop zone). Week 11 sits in `live` until Sleeper rolls to Week 12.
+- **Backup sync:** live source pulled to `src/`. It carries the Nov 22 calls that were live but not on this branch: Davante Adams back Week 15 (was 14), Josh Jacobs back Week 13 (was 12). `DYK_SEED` 60.
+
 ## 2026-11-20
 - **Handcuff table additions:** Perine 13 with Chase Brown out, Singletary 12 with Skattebo out, and Green Bay with Jacobs out: Kaleb Johnson 11, Lloyd 8.5. All four are free agents now; they are in the table so a pickup before the playoffs counts.
 - **RB handcuffs in the roster engine.** When a lead back is out (random injury, a call, or no game), his handcuff plays to a reviewed "lead out" number for that week, whoever owns either man. Unrostered leads are in the injury draw. Denver and Arizona have role changes from Week 13. Table locked for the season (`HANDCUFFS`, `HC_NORM`); rebuilt each year around Week 11 with Benton's review. Rule for drafting it: RB2 +30%, RB3 +17% of the lead's points. Effect: title odds moved under 0.6 points for every team.
