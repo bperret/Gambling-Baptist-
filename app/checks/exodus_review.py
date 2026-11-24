@@ -18,7 +18,7 @@ print('INJURED STARTERS (playoff points, Weeks %s)' % '/'.join(map(str, X['pw'])
 for i, (pid, a) in enumerate(sorted(agg.items(), key=lambda x: -sum(v or 0 for v in x[1]['w'])), 1):
     grey = '  [team under 1% playoff odds]' if a['po'] < 0.01 else ''
     print(f"{i:2}. {nm(pid)} ({a['st']}) {own[a['uid']]}: {sum(v or 0 for v in a['w']):.1f} = {' / '.join('-' if v is None else f'{v:.1f}' for v in a['w'])}{grey}")
-calls = re.search(r'const EX_CALLS = (\{.*?\});', open('src/app.js').read()).group(1)
+calls = re.search(r'const EX_CALLS = (\{.*?\} \});', open('src/app.js').read(), re.S).group(1)
 print('\nCOMMISSIONER CALLS:', calls)
 print('\nTEAMMATE ADJUSTMENTS (1+ point)')
 for r in X['rows']:

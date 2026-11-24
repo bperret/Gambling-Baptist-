@@ -5,6 +5,10 @@ History before Nov 18, 2026 was not logged here; see `git log` on `app-source` a
 
 ## 2026-11-23
 - **Week 11 final export** loaded by the commissioner through the drop zone (Did You Know bumped by the drop zone). Week 11 sits in `live` until Sleeper rolls to Week 12.
+- **Week 11 scored as final** (Benton's call, before Sleeper rolled the week): the final `live` rows copied into `matchups["11"]` and `last_scored_leg` set to 11, so standings, odds, recap, and everything else run through Week 11. The next export replaces this with Sleeper's own Week 11.
+- **Commissioner's call:** Brock Bowers back Week 12.
+- `checks/exodus_review.py`: the calls regex now reads the multi-line `EX_CALLS` block.
+- `checks/vigil_fixture.py` needs usage data for the last scored week, so run it on an export where the in-progress week is not yet scored.
 - **Backup sync:** live source pulled to `src/`. It carries the Nov 22 calls that were live but not on this branch: Davante Adams back Week 15 (was 14), Josh Jacobs back Week 13 (was 12). `DYK_SEED` 60.
 
 ## 2026-11-20
