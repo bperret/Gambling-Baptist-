@@ -3,6 +3,11 @@
 Shipped changes to the Gambling Baptist app, newest first. Dates are when the change went live. Details live in `HANDOFF.md`; this file says what changed and why.
 History before Nov 18, 2026 was not logged here; see `git log` on `app-source` and the dated rules in `HANDOFF.md`.
 
+## 2026-11-24
+- **Week 12 export** (Sleeper rolled to Week 12, exported 1:23 pm CT). Sleeper's own Week 11 scores match the ones copied in on Nov 23 for all 12 teams. Adds 4 late Week 11 moves and 8 Week 12 pickups, Week 12 projections, and two injury changes (Adam Randall Out, Denzel Boston Questionable). `dykBump` carried over (29).
+- **Testimonies:** Week 11 Late-Round dump loaded, 42 notes on rostered players (10 New Calling, 11 Back Pew, 3 Manna, 5 Fasting, 13 untagged). Replaces the Week 9 set. Every number checked against the PDF text.
+- Did You Know rotated (`DYK_SEED` 62).
+
 ## 2026-11-23
 - **Week 11 final export** loaded by the commissioner through the drop zone (Did You Know bumped by the drop zone). Week 11 sits in `live` until Sleeper rolls to Week 12.
 - **Week 11 scored as final** (Benton's call, before Sleeper rolled the week): the final `live` rows copied into `matchups["11"]` and `last_scored_leg` set to 11, so standings, odds, recap, and everything else run through Week 11. The next export replaces this with Sleeper's own Week 11.
