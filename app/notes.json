@@ -1,204 +1,672 @@
 {
-"season": "2026",
-"week": 11,
-"source": "Late-Round",
-"notes": [
-{
-"pid": "6813",
-"text": "8.8 Standard PPR points a game on 13.7 Expected Fantasy Points over his last four. Before that stretch: 19.6 on 18.3.",
-"tag": "pew"
-},
-{
-"pid": "12518",
-"text": "Two games since Josh Downs and Keenan Allen were traded: a 17% target share, 6.4 Expected Fantasy Points and 2.8 Standard PPR points a game. Before the trades: 23%, 12.7, and 12.0. He and Jonathan Taylor are still the only Colts at a 15% target share or better in those two games.",
-"tag": "pew"
-},
-{
-"pid": "5001",
-"text": "A 65% route share or better in each of his first four games, and only once since. Target shares of 6% and 4% over his last two.",
-"tag": "pew"
-},
-{
-"pid": "7569",
-"text": "28 routes but only 5 targets in Week 11. Tank Dell drew 4 targets on 16 routes."
-},
-{
-"pid": "5892",
-"text": "A 72% snap share and a 72% rush share with Woody Marks out on Thursday. His 19.2 Expected Fantasy Points were his first game above 9 since Week 1.",
-"tag": "call"
-},
-{
-"pid": "12474",
-"text": "Missed Thursday's game. David Montgomery took 72% of the snaps and 72% of the rushes without him, with 19.2 Expected Fantasy Points, his first game above 9 since Week 1."
-},
-{
-"pid": "8138",
-"text": "16 or more Standard PPR points in every game since Week 1, with more than 2 targets in only three of those games. He has not reached 4 targets in a game since Week 1.",
-"tag": "manna"
-},
-{
-"pid": "4984",
-"text": "12.2 Standard PPR points against Miami, with no rush attempts. It was the first game of his career with 10 or more passes and no rush. Miami has allowed 7.6 a game to quarterbacks over its last three: Jared Goff, Daniel Jones, and Allen."
-},
-{
-"pid": "8134",
-"text": "A 79% route share against Miami, his highest since Week 4. His 9 targets were a season high, and his 20% target share tied his best since Week 4.",
-"tag": "call"
-},
-{
-"pid": "4983",
-"text": "16.7 Standard PPR points a game in his six games with a 70% route share or better."
-},
-{
-"pid": "12495",
-"text": "A 73% snap share on Sunday, near his usual since De'Von Achane got hurt. His 55% rush share was his lowest since Week 5. Under 10 Standard PPR points in three of his last four.",
-"tag": "pew"
-},
-{
-"pid": "13296",
-"text": "Only 2 catches for 30 yards against Buffalo, on a 30% target share (10 targets). Target shares of 38%, 25%, and 30% over his last three.",
-"tag": "fast"
-},
-{
-"pid": "12519",
-"text": "A 63% route share against New Orleans, and no game at 70% since Week 5. Kalif Raymond drew more targets than he did for the first time since Week 1.",
-"tag": "pew"
-},
-{
-"pid": "11620",
-"text": "Under 10 Standard PPR points on Sunday for the first time in four games, on a 19% target share. His target shares over those four: 17%, 18%, 20%, and 19%.",
-"tag": "fast"
-},
-{
-"pid": "11560",
-"text": "Under 15 Standard PPR points in each of his last three games.",
-"tag": "pew"
-},
-{
-"pid": "6790",
-"text": "Against New Orleans: a 47% snap share, his lowest since Week 4, and a 42% rush share, his lowest since Week 5. Three straight games under a 10% target share.",
-"tag": "pew"
-},
-{
-"pid": "12534",
-"text": "22 snaps on Sunday, five fewer than D'Andre Swift, with 8 carries and 1 target. Salvon Ahmed added 6 carries on 9 snaps.",
-"tag": "call"
-},
-{
-"pid": "8144",
-"text": "A 38.5% target share against Chicago, and at least 23% in all but one game this season. His 27% slot rate was his highest since Jordyn Tyson returned, up from 15% the week before.",
-"tag": "call"
-},
-{
-"pid": "13281",
-"text": "Route and target shares by week. Week 9: 35% and 16%. Week 10: 72% and 39%. Week 11: 43% and 5%.",
-"tag": "pew"
-},
-{
-"pid": "7543",
-"text": "A 45% snap share against Chicago, and no game at 60% this year. His 64% rush share was a season high and gave him 14 carries, also a season high. It was only the second time he topped 10 carries."
-},
-{
-"pid": "12545",
-"text": "6, 5, and 3 scrambles over his last three games, after none of his first eight reached 3. Still, 14.4 Standard PPR points a game since Week 3, down from 23.1 in Weeks 1 to 3."
-},
-{
-"pid": "7588",
-"text": "24 goal-line rushes this season, the most by a running back through 11 weeks since at least 2016."
-},
-{
-"pid": "8137",
-"text": "43.5 and 23.8 Standard PPR points over his last two games, two of his three best this season. His target shares in them, 37% and 30%, were also two of his three highest.",
-"tag": "call"
-},
-{
-"pid": "6786",
-"text": "Under a 25% target share only twice this year, and under 20% only once, in a game he got hurt."
-},
-{
-"pid": "3294",
-"text": "9 passing touchdowns over his last two games. He had 9 in the six games before that.",
-"tag": "manna"
-},
-{
-"pid": "5967",
-"text": "81% of Tennessee's snaps and a 51% route share on Sunday. He ran for 110 yards but drew 1 target and did not catch it. His 4% target share was his second lowest this season."
-},
-{
-"pid": "13279",
-"text": "A 77% route share on Sunday, the most of any Titans wide receiver. None reached 80%. Chimere Dike was at 71% and Elic Ayomanor at 49%, down from 86% in Week 10."
-},
-{
-"pid": "12540",
-"text": "A 71% route share on Sunday, with 64% of his routes from the slot. Carnell Tate was at 77% and Elic Ayomanor at 49%, down from 86% in Week 10.",
-"tag": "call"
-},
-{
-"pid": "12514",
-"text": "2 catches for 18 yards against Detroit. He has not topped 70 receiving yards since Week 10 of last season, and his high this year is 63 (Week 1). Even so, at least a 15% target share in every game this year.",
-"tag": "fast"
-},
-{
-"pid": "11584",
-"text": "A 25% targets per route run rate with Baker Mayfield on the field this season, and 11% with him off it. Tampa Bay threw 32 and 33 passes over its last two games, after 11 and 3 in the two before."
-},
-{
-"pid": "8148",
-"text": "19.3 Standard PPR points on Sunday, his first game above 10 in three weeks, on only a 14% target share. Target shares of 8%, 22%, and 14% over his last three.",
-"tag": "manna"
-},
-{
-"pid": "10859",
-"text": "A 21% target share against Tampa Bay, his highest in a game since Week 4.",
-"tag": "call"
-},
-{
-"pid": "9221",
-"text": "28.1 Standard PPR points a game through 11 weeks. Among running backs since 2016, only Christian McCaffrey's 2019 start (30.3) was higher."
-},
-{
-"pid": "8130",
-"text": "Weeks 1 to 9: 90% route share, 1.71 yards per route run, 27% targets per route run, 5 touchdowns, 6 end-zone targets, 18.1 Standard PPR points a game. Weeks 10 and 11: 83%, 1.82, 38%, no touchdowns, no end-zone targets, 11.8 a game.",
-"tag": "fast"
-},
-{
-"pid": "8132",
-"text": "3 more snaps than Bam Knight on Sunday. Each had 7 carries, and he ran 9 routes to Knight's 8. Together they scored 7.8 Standard PPR points.",
-"tag": "pew"
-},
-{
-"pid": "13337",
-"text": "82% of Kansas City's snaps and 79% of its rushes on Sunday, and 92% and 95% through three quarters. 59.4 Standard PPR points over his last two. Among 291 players with 50 or more routes this year, only Jaxon Smith-Njigba and Mike Evans have more yards per route run.",
-"tag": "call"
-},
-{
-"pid": "9500",
-"text": "His route share rose from 21% in Week 10 to 33% in Week 11, with 100% and then 85% of his routes from the slot. A 13.5% target share this week, and a 48% targets per route run rate since joining Kansas City.",
-"tag": "call"
-},
-{
-"pid": "10229",
-"text": "A 50% route share against Arizona (51% with Patrick Mahomes on the field). He has not topped 70% since his Week 4 injury. Since his return four weeks ago, his target share has stayed between 16% and 24%.",
-"tag": "pew"
-},
-{
-"pid": "5846",
-"text": "1.2 Standard PPR points in Week 11, in a game he was ejected from. Single digits six times this year and double digits four times, yet under 10 Expected Fantasy Points only once. Only Michael Wilson and AJ Brown have fallen short of their expected points by more a game.",
-"tag": "fast"
-},
-{
-"pid": "13274",
-"text": "Ran a route on all 19 dropbacks after DK Metcalf was ejected against Philadelphia. Roman Wilson and Max Hurleman each ran 17. Before the ejection: Bernard 88%, Wilson 62%, Hurleman 3%.",
-"tag": "call"
-},
-{
-"pid": "8228",
-"text": "9.4 and 8.0 Expected Fantasy Points over his last two, with 9.1 and 4.9 Standard PPR points: his two lowest totals in both this season. His rush shares of 30% and 45% were also his lowest.",
-"tag": "pew"
-},
-{
-"pid": "96",
-"text": "Three games this year at 10 or more air yards per attempt: Weeks 1, 3, and 4. Since Week 4, the lowest air yards per attempt in the league among quarterbacks with 100 or more attempts."
-}
-]
+ "season": "2026",
+ "items": [
+  {
+   "pid": "6813",
+   "wk": 11,
+   "tag": "pew",
+   "text": "8.8 Standard PPR points a game on 13.7 Expected Fantasy Points over his last four. Before that stretch: 19.6 on 18.3.",
+   "src": "lr"
+  },
+  {
+   "pid": "12518",
+   "wk": 11,
+   "tag": "pew",
+   "text": "Two games since Josh Downs and Keenan Allen were traded: a 17% target share, 6.4 Expected Fantasy Points and 2.8 Standard PPR points a game. Before the trades: 23%, 12.7, and 12.0. He and Jonathan Taylor are still the only Colts at a 15% target share or better in those two games.",
+   "src": "lr"
+  },
+  {
+   "pid": "5001",
+   "wk": 11,
+   "tag": "pew",
+   "text": "A 65% route share or better in each of his first four games, and only once since. Target shares of 6% and 4% over his last two.",
+   "src": "lr"
+  },
+  {
+   "pid": "7569",
+   "wk": 11,
+   "tag": "",
+   "text": "28 routes but only 5 targets in Week 11. Tank Dell drew 4 targets on 16 routes.",
+   "src": "lr"
+  },
+  {
+   "pid": "5892",
+   "wk": 11,
+   "tag": "call",
+   "text": "A 72% snap share and a 72% rush share with Woody Marks out on Thursday. His 19.2 Expected Fantasy Points were his first game above 9 since Week 1.",
+   "src": "lr"
+  },
+  {
+   "pid": "12474",
+   "wk": 11,
+   "tag": "",
+   "text": "Missed Thursday's game. David Montgomery took 72% of the snaps and 72% of the rushes without him, with 19.2 Expected Fantasy Points, his first game above 9 since Week 1.",
+   "src": "lr"
+  },
+  {
+   "pid": "8138",
+   "wk": 11,
+   "tag": "manna",
+   "text": "16 or more Standard PPR points in every game since Week 1, with more than 2 targets in only three of those games. He has not reached 4 targets in a game since Week 1.",
+   "src": "lr"
+  },
+  {
+   "pid": "4984",
+   "wk": 11,
+   "tag": "",
+   "text": "12.2 Standard PPR points against Miami, with no rush attempts. It was the first game of his career with 10 or more passes and no rush. Miami has allowed 7.6 a game to quarterbacks over its last three: Jared Goff, Daniel Jones, and Allen.",
+   "src": "lr"
+  },
+  {
+   "pid": "8134",
+   "wk": 11,
+   "tag": "call",
+   "text": "A 79% route share against Miami, his highest since Week 4. His 9 targets were a season high, and his 20% target share tied his best since Week 4.",
+   "src": "lr"
+  },
+  {
+   "pid": "4983",
+   "wk": 11,
+   "tag": "",
+   "text": "16.7 Standard PPR points a game in his six games with a 70% route share or better.",
+   "src": "lr"
+  },
+  {
+   "pid": "12495",
+   "wk": 11,
+   "tag": "pew",
+   "text": "A 73% snap share on Sunday, near his usual since De'Von Achane got hurt. His 55% rush share was his lowest since Week 5. Under 10 Standard PPR points in three of his last four.",
+   "src": "lr"
+  },
+  {
+   "pid": "13296",
+   "wk": 11,
+   "tag": "fast",
+   "text": "Only 2 catches for 30 yards against Buffalo, on a 30% target share (10 targets). Target shares of 38%, 25%, and 30% over his last three.",
+   "src": "lr"
+  },
+  {
+   "pid": "12519",
+   "wk": 11,
+   "tag": "pew",
+   "text": "A 63% route share against New Orleans, and no game at 70% since Week 5. Kalif Raymond drew more targets than he did for the first time since Week 1.",
+   "src": "lr"
+  },
+  {
+   "pid": "11620",
+   "wk": 11,
+   "tag": "fast",
+   "text": "Under 10 Standard PPR points on Sunday for the first time in four games, on a 19% target share. His target shares over those four: 17%, 18%, 20%, and 19%.",
+   "src": "lr"
+  },
+  {
+   "pid": "11560",
+   "wk": 11,
+   "tag": "pew",
+   "text": "Under 15 Standard PPR points in each of his last three games.",
+   "src": "lr"
+  },
+  {
+   "pid": "6790",
+   "wk": 11,
+   "tag": "pew",
+   "text": "Against New Orleans: a 47% snap share, his lowest since Week 4, and a 42% rush share, his lowest since Week 5. Three straight games under a 10% target share.",
+   "src": "lr"
+  },
+  {
+   "pid": "12534",
+   "wk": 11,
+   "tag": "call",
+   "text": "22 snaps on Sunday, five fewer than D'Andre Swift, with 8 carries and 1 target. Salvon Ahmed added 6 carries on 9 snaps.",
+   "src": "lr"
+  },
+  {
+   "pid": "8144",
+   "wk": 11,
+   "tag": "call",
+   "text": "A 38.5% target share against Chicago, and at least 23% in all but one game this season. His 27% slot rate was his highest since Jordyn Tyson returned, up from 15% the week before.",
+   "src": "lr"
+  },
+  {
+   "pid": "13281",
+   "wk": 11,
+   "tag": "pew",
+   "text": "Route and target shares by week. Week 9: 35% and 16%. Week 10: 72% and 39%. Week 11: 43% and 5%.",
+   "src": "lr"
+  },
+  {
+   "pid": "7543",
+   "wk": 11,
+   "tag": "",
+   "text": "A 45% snap share against Chicago, and no game at 60% this year. His 64% rush share was a season high and gave him 14 carries, also a season high. It was only the second time he topped 10 carries.",
+   "src": "lr"
+  },
+  {
+   "pid": "12545",
+   "wk": 11,
+   "tag": "",
+   "text": "6, 5, and 3 scrambles over his last three games, after none of his first eight reached 3. Still, 14.4 Standard PPR points a game since Week 3, down from 23.1 in Weeks 1 to 3.",
+   "src": "lr"
+  },
+  {
+   "pid": "7588",
+   "wk": 11,
+   "tag": "",
+   "text": "24 goal-line rushes this season, the most by a running back through 11 weeks since at least 2016.",
+   "src": "lr"
+  },
+  {
+   "pid": "8137",
+   "wk": 11,
+   "tag": "call",
+   "text": "43.5 and 23.8 Standard PPR points over his last two games, two of his three best this season. His target shares in them, 37% and 30%, were also two of his three highest.",
+   "src": "lr"
+  },
+  {
+   "pid": "6786",
+   "wk": 11,
+   "tag": "",
+   "text": "Under a 25% target share only twice this year, and under 20% only once, in a game he got hurt.",
+   "src": "lr"
+  },
+  {
+   "pid": "3294",
+   "wk": 11,
+   "tag": "manna",
+   "text": "9 passing touchdowns over his last two games. He had 9 in the six games before that.",
+   "src": "lr"
+  },
+  {
+   "pid": "5967",
+   "wk": 11,
+   "tag": "",
+   "text": "81% of Tennessee's snaps and a 51% route share on Sunday. He ran for 110 yards but drew 1 target and did not catch it. His 4% target share was his second lowest this season.",
+   "src": "lr"
+  },
+  {
+   "pid": "13279",
+   "wk": 11,
+   "tag": "",
+   "text": "A 77% route share on Sunday, the most of any Titans wide receiver. None reached 80%. Chimere Dike was at 71% and Elic Ayomanor at 49%, down from 86% in Week 10.",
+   "src": "lr"
+  },
+  {
+   "pid": "12540",
+   "wk": 11,
+   "tag": "call",
+   "text": "A 71% route share on Sunday, with 64% of his routes from the slot. Carnell Tate was at 77% and Elic Ayomanor at 49%, down from 86% in Week 10.",
+   "src": "lr"
+  },
+  {
+   "pid": "12514",
+   "wk": 11,
+   "tag": "fast",
+   "text": "2 catches for 18 yards against Detroit. He has not topped 70 receiving yards since Week 10 of last season, and his high this year is 63 (Week 1). Even so, at least a 15% target share in every game this year.",
+   "src": "lr"
+  },
+  {
+   "pid": "11584",
+   "wk": 11,
+   "tag": "",
+   "text": "A 25% targets per route run rate with Baker Mayfield on the field this season, and 11% with him off it. Tampa Bay threw 32 and 33 passes over its last two games, after 11 and 3 in the two before.",
+   "src": "lr"
+  },
+  {
+   "pid": "8148",
+   "wk": 11,
+   "tag": "manna",
+   "text": "19.3 Standard PPR points on Sunday, his first game above 10 in three weeks, on only a 14% target share. Target shares of 8%, 22%, and 14% over his last three.",
+   "src": "lr"
+  },
+  {
+   "pid": "10859",
+   "wk": 11,
+   "tag": "call",
+   "text": "A 21% target share against Tampa Bay, his highest in a game since Week 4.",
+   "src": "lr"
+  },
+  {
+   "pid": "9221",
+   "wk": 11,
+   "tag": "",
+   "text": "28.1 Standard PPR points a game through 11 weeks. Among running backs since 2016, only Christian McCaffrey's 2019 start (30.3) was higher.",
+   "src": "lr"
+  },
+  {
+   "pid": "8130",
+   "wk": 11,
+   "tag": "fast",
+   "text": "Weeks 1 to 9: 90% route share, 1.71 yards per route run, 27% targets per route run, 5 touchdowns, 6 end-zone targets, 18.1 Standard PPR points a game. Weeks 10 and 11: 83%, 1.82, 38%, no touchdowns, no end-zone targets, 11.8 a game.",
+   "src": "lr"
+  },
+  {
+   "pid": "8132",
+   "wk": 11,
+   "tag": "pew",
+   "text": "3 more snaps than Bam Knight on Sunday. Each had 7 carries, and he ran 9 routes to Knight's 8. Together they scored 7.8 Standard PPR points.",
+   "src": "lr"
+  },
+  {
+   "pid": "13337",
+   "wk": 11,
+   "tag": "call",
+   "text": "82% of Kansas City's snaps and 79% of its rushes on Sunday, and 92% and 95% through three quarters. 59.4 Standard PPR points over his last two. Among 291 players with 50 or more routes this year, only Jaxon Smith-Njigba and Mike Evans have more yards per route run.",
+   "src": "lr"
+  },
+  {
+   "pid": "9500",
+   "wk": 11,
+   "tag": "call",
+   "text": "His route share rose from 21% in Week 10 to 33% in Week 11, with 100% and then 85% of his routes from the slot. A 13.5% target share this week, and a 48% targets per route run rate since joining Kansas City.",
+   "src": "lr"
+  },
+  {
+   "pid": "10229",
+   "wk": 11,
+   "tag": "pew",
+   "text": "A 50% route share against Arizona (51% with Patrick Mahomes on the field). He has not topped 70% since his Week 4 injury. Since his return four weeks ago, his target share has stayed between 16% and 24%.",
+   "src": "lr"
+  },
+  {
+   "pid": "5846",
+   "wk": 11,
+   "tag": "fast",
+   "text": "1.2 Standard PPR points in Week 11, in a game he was ejected from. Single digits six times this year and double digits four times, yet under 10 Expected Fantasy Points only once. Only Michael Wilson and AJ Brown have fallen short of their expected points by more a game.",
+   "src": "lr"
+  },
+  {
+   "pid": "13274",
+   "wk": 11,
+   "tag": "call",
+   "text": "Ran a route on all 19 dropbacks after DK Metcalf was ejected against Philadelphia. Roman Wilson and Max Hurleman each ran 17. Before the ejection: Bernard 88%, Wilson 62%, Hurleman 3%.",
+   "src": "lr"
+  },
+  {
+   "pid": "8228",
+   "wk": 11,
+   "tag": "pew",
+   "text": "9.4 and 8.0 Expected Fantasy Points over his last two, with 9.1 and 4.9 Standard PPR points: his two lowest totals in both this season. His rush shares of 30% and 45% were also his lowest.",
+   "src": "lr"
+  },
+  {
+   "pid": "96",
+   "wk": 11,
+   "tag": "",
+   "text": "Three games this year at 10 or more air yards per attempt: Weeks 1, 3, and 4. Since Week 4, the lowest air yards per attempt in the league among quarterbacks with 100 or more attempts.",
+   "src": "lr"
+  },
+  {
+   "pid": "13337",
+   "wk": 11,
+   "tone": "up",
+   "text": "7.0 yards per touch, best among backs with 50+ touches. Last four games: 67 touches, 491 scrimmage yards, 5 TDs, the first rookie back over 400 yards in four games since Gibbs.",
+   "src": "nl"
+  },
+  {
+   "pid": "12527",
+   "wk": 11,
+   "tone": "up",
+   "text": "51 catches and 507 receiving yards, both the most among backs, plus 4 receiving TDs (tied for the most).",
+   "src": "nl"
+  },
+  {
+   "pid": "9487",
+   "wk": 11,
+   "tone": "",
+   "text": "Week 11: a 37.0% target share (5th in the league) and 152 uncatchable air yards, the most of anyone.",
+   "src": "nl"
+  },
+  {
+   "pid": "6770",
+   "wk": 11,
+   "tone": "up",
+   "text": "74.7% completions, ahead of the single-season record (Drew Brees, 74.4%). Leads the NFL in EPA, passing TDs, and passer rating.",
+   "src": "nl"
+  },
+  {
+   "pid": "13279",
+   "wk": 11,
+   "tone": "up",
+   "text": "1.96 yards per route run, 4th among rookie receivers.",
+   "src": "nl"
+  },
+  {
+   "pid": "8130",
+   "wk": 11,
+   "tone": "up",
+   "text": "Week 11: a 45.2% target share, 2nd in the league.",
+   "src": "nl"
+  },
+  {
+   "pid": "7525",
+   "wk": 11,
+   "tone": "",
+   "text": "Week 11: a 57.1% target share, the league high, with 12 targets on 23 routes. Only 41 yards, and 90 of his air yards were uncatchable.",
+   "src": "nl"
+  },
+  {
+   "pid": "8150",
+   "wk": 11,
+   "tone": "",
+   "text": "RB5 at 22.4 a game through Week 4, RB22 at 12.4 since. Blake Corum outscored him in 4 of the last 6.",
+   "src": "nl"
+  },
+  {
+   "pid": "8150",
+   "wk": 11,
+   "tone": "up",
+   "text": "Still the bigger role: 13.5 expected fantasy points a game to Corum's 10.4. His yards before contact fell from 3.15 to 1.45; yards after contact held steady.",
+   "src": "nl"
+  },
+  {
+   "pid": "10213",
+   "wk": 11,
+   "tone": "",
+   "text": "97 uncatchable air yards in Week 11, 3rd most in the league.",
+   "src": "nl"
+  },
+  {
+   "pid": "4046",
+   "wk": 11,
+   "tone": "up",
+   "text": "Last four games: 1,235 passing yards, 13 TDs, no interceptions.",
+   "src": "nl"
+  },
+  {
+   "pid": "8183",
+   "wk": 11,
+   "tone": "up",
+   "text": "1st in EPA per dropback in expected passing situations (+0.37). His connection with Mike Evans ranks 1st in EPA per attempt, passer rating, success rate, and completion % over expected.",
+   "src": "nl"
+  },
+  {
+   "pid": "6786",
+   "wk": 11,
+   "tone": "up",
+   "text": "Week 11: a 36.4% target share, 6th in the league.",
+   "src": "nl"
+  },
+  {
+   "pid": "8112",
+   "wk": 11,
+   "tone": "down",
+   "text": "80 targets and 1 or fewer receiving TDs, the most targets of anyone with that few scores.",
+   "src": "nl"
+  },
+  {
+   "pid": "1479",
+   "wk": 11,
+   "tone": "down",
+   "text": "69 targets and 1 or fewer receiving TDs, 2nd most in the league.",
+   "src": "nl"
+  },
+  {
+   "pid": "13298",
+   "wk": 11,
+   "tone": "down",
+   "text": "63 targets and 1 or fewer receiving TDs, 3rd most in the league.",
+   "src": "nl"
+  },
+  {
+   "pid": "13294",
+   "wk": 11,
+   "tone": "down",
+   "text": "0.92 yards per route run, last of 43 receivers with 50+ targets. 57 targets and 1 or fewer receiving TDs.",
+   "src": "nl"
+  },
+  {
+   "pid": "2216",
+   "wk": 11,
+   "tone": "up",
+   "text": "0.229 first downs per route run, the best season since 2021 (100+ routes). With Brock Purdy: 1.03 EPA per attempt and a 150.2 passer rating, both 1st.",
+   "src": "nl"
+  },
+  {
+   "pid": "3198",
+   "wk": 11,
+   "tone": "up",
+   "text": "9 catches in 2 games with Jacoby Brissett at quarterback, after 12 in his previous 9.",
+   "src": "nl"
+  },
+  {
+   "pid": "9756",
+   "wk": 11,
+   "tone": "",
+   "text": "Out and facing thumb surgery. Tai Felton is running as Minnesota's No. 2 receiver.",
+   "src": "nl"
+  },
+  {
+   "pid": "13296",
+   "wk": 11,
+   "tone": "up",
+   "text": "2.08 yards per route run, 3rd among rookie receivers.",
+   "src": "nl"
+  },
+  {
+   "pid": "13274",
+   "wk": 11,
+   "tone": "down",
+   "text": "1.08 yards per route run, 40th of 43 receivers with 50+ targets.",
+   "src": "nl"
+  },
+  {
+   "pid": "11560",
+   "wk": 11,
+   "tone": "up",
+   "text": "3rd in EPA per dropback in expected passing situations (+0.33).",
+   "src": "nl"
+  },
+  {
+   "pid": "12501",
+   "wk": 11,
+   "tone": "up",
+   "text": "The league's best man-beater: 3.80 yards per route run vs. man (WR1), 2.27 vs. zone (WR19). The Rams, his Week 12 opponent, play man at the 3rd-highest rate (30%).",
+   "src": "nl"
+  },
+  {
+   "pid": "5995",
+   "wk": 11,
+   "tone": "up",
+   "text": "6.8 yards per touch, 2nd among backs with 50+ touches.",
+   "src": "nl"
+  },
+  {
+   "pid": "9500",
+   "wk": 11,
+   "tone": "up",
+   "text": "56 yards and 5 targets a game in two weeks with Kansas City, on 5.33 yards per route run.",
+   "src": "nl"
+  },
+  {
+   "pid": "1466",
+   "wk": 11,
+   "tone": "up",
+   "text": "On pace for 1,106 receiving yards. Week 11: 7 targets, the Chiefs' high.",
+   "src": "nl"
+  },
+  {
+   "pid": "13301",
+   "wk": 11,
+   "tone": "up",
+   "text": "Breakout game: 11 targets, 9 catches, 121 yards, 16.7 points, with 2 catches for 66 yards on the winning drive.",
+   "src": "nl"
+  },
+  {
+   "pid": "8144",
+   "wk": 11,
+   "tone": "up",
+   "text": "Week 11: 49 routes on 51 dropbacks, the most of any Saint.",
+   "src": "nl"
+  },
+  {
+   "pid": "12514",
+   "wk": 11,
+   "tone": "down",
+   "text": "In 6 games with Baker Mayfield, a 17-game pace of 51 catches, 558 yards, and 3 TDs: 7.3 PPR points a game (WR71). 1.05 yards per route run, 41st of 43.",
+   "src": "nl"
+  },
+  {
+   "pid": "13345",
+   "wk": 11,
+   "tone": "up",
+   "text": "Week 11: 24 carries and 5 targets. J.K. Dobbins and Cody Schrader had 1 carry each.",
+   "src": "nl"
+  },
+  {
+   "pid": "13968",
+   "wk": 11,
+   "tone": "up",
+   "text": "5 field goals in one half in Week 11, the first kicker to do it since 2017.",
+   "src": "nl"
+  },
+  {
+   "pid": "9221",
+   "wk": 11,
+   "tone": "up",
+   "text": "One of four players with 1,500+ scrimmage yards and 15+ scrimmage TDs through 10 games, with Emmitt Smith, Eric Dickerson, and O.J. Simpson.",
+   "src": "nl"
+  },
+  {
+   "pid": "9488",
+   "wk": 11,
+   "tone": "up",
+   "text": "52% of Seattle's receiving yards, the biggest share by one player since 2016. 0.193 first downs per route run, 2nd best since 2021.",
+   "src": "nl"
+  },
+  {
+   "pid": "4984",
+   "wk": 11,
+   "tone": "",
+   "text": "4th in EPA per dropback in expected passing situations (+0.24).",
+   "src": "nl"
+  },
+  {
+   "pid": "7523",
+   "wk": 11,
+   "tone": "up",
+   "text": "5th in EPA per dropback in expected passing situations (+0.22).",
+   "src": "nl"
+  },
+  {
+   "pid": "13276",
+   "wk": 11,
+   "tone": "up",
+   "text": "2.71 yards per route run, best among rookie receivers.",
+   "src": "nl"
+  },
+  {
+   "pid": "11586",
+   "wk": 11,
+   "tone": "",
+   "text": "Leads all backs in EPA per carry for the 2nd straight season. Outscored Kyren Williams in 4 of the last 6 on 10.4 expected fantasy points a game to Kyren's 13.5.",
+   "src": "nl"
+  },
+  {
+   "pid": "13269",
+   "wk": 11,
+   "tone": "up",
+   "text": "28.9 PPR points (QB3) without Brock Bowers in his second career start.",
+   "src": "nl"
+  },
+  {
+   "pid": "8228",
+   "wk": 11,
+   "tone": "up",
+   "text": "6.4 yards per touch, 3rd among backs with 50+ touches.",
+   "src": "nl"
+  },
+  {
+   "pid": "11610",
+   "wk": 11,
+   "tone": "down",
+   "text": "57 targets and 1 or fewer receiving TDs.",
+   "src": "nl"
+  },
+  {
+   "pid": "11834",
+   "wk": 11,
+   "tone": "up",
+   "text": "Week 11: 46 routes on 51 dropbacks, 2nd among Saints.",
+   "src": "nl"
+  },
+  {
+   "pid": "11576",
+   "wk": 11,
+   "tone": "up",
+   "text": "5.0 yards per carry (9th), 48.4% success rate (3rd), 15.6% explosive runs (2nd), and 118 rushing yards over expected.",
+   "src": "nl"
+  },
+  {
+   "pid": "8155",
+   "wk": 11,
+   "tone": "down",
+   "text": "3.4 yards per carry (45th), 39.0% success rate (24th), 7.8% explosive runs (34th), and 31 rushing yards under expected.",
+   "src": "nl"
+  },
+  {
+   "pid": "12518",
+   "wk": 11,
+   "tone": "down",
+   "text": "The only receiver or tight end with 35+ targets under 5 yards per target. Last four games: 22, 1, 44, and 18 yards.",
+   "src": "nl"
+  },
+  {
+   "pid": "11635",
+   "wk": 11,
+   "tone": "up",
+   "text": "Week 11: a 38.1% target share, 4th in the league.",
+   "src": "nl"
+  },
+  {
+   "pid": "8126",
+   "wk": 11,
+   "tone": "down",
+   "text": "1.11 yards per route run, 39th of 43 receivers with 50+ targets.",
+   "src": "nl"
+  }
+ ],
+ "teams": [
+  {
+   "team": "LAR",
+   "wk": 11,
+   "tone": "",
+   "text": "Defenses put 8+ in the box on 76% of Rams running back runs, the most since 2013, yet the Rams have the lowest stuff rate (9.9%) and 43% of those runs gain 5+ yards. Last six opponents: 22-34-1. Next six: 34-23.",
+   "src": "nl"
+  },
+  {
+   "team": "CIN",
+   "wk": 11,
+   "tone": "up",
+   "text": "Pass rate over expected over the last 5 weeks: +16.9%, 1st by a wide margin (next best +8.4%).",
+   "src": "nl"
+  },
+  {
+   "team": "KC",
+   "wk": 11,
+   "tone": "",
+   "text": "Pass rate over expected over the last 5 weeks: +8.4%, 2nd. Week 11 targets were spread thin: seven players with 4+, nobody above 7.",
+   "src": "nl"
+  },
+  {
+   "team": "NO",
+   "wk": 11,
+   "tone": "",
+   "text": "Pass rate over expected over the last 5 weeks: +5.1%, 3rd.",
+   "src": "nl"
+  },
+  {
+   "team": "GB",
+   "wk": 11,
+   "tone": "",
+   "text": "Pass rate over expected over the last 5 weeks: +4.3%, 5th.",
+   "src": "nl"
+  },
+  {
+   "team": "TEN",
+   "wk": 11,
+   "tone": "up",
+   "text": "Over the last three weeks: 7th in neutral pass rate (was 29th) and 10th in passing yards a game (was 31st). 28.5 points a game over the last month.",
+   "src": "nl"
+  }
+ ]
 }

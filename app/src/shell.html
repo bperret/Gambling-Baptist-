@@ -643,6 +643,19 @@ body.pc-open { overflow: hidden; }
 .pc-sec h3 { margin-top: 16px; }
 .pc-sub { display: block; font-size: .78rem; }
 .pc-line { margin: 2px 0 0; }
+.gl-tile .gl-line { margin: 6px 0 0; }
+.gl-card { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.gl-card:last-of-type { border-bottom: 0; }
+.gl-h { margin-bottom: 4px; }
+.gl-line { margin: 5px 0 0; padding: 1px 0 1px 10px; border-left: 3px solid var(--line); line-height: 1.45; overflow-wrap: anywhere; }
+.gl-line.up { border-left-color: var(--win); }
+.gl-line.down { border-left-color: var(--loss); }
+.gl-line b { font-variant-numeric: tabular-nums; }
+.gl-line .tag { margin: 0 4px 0 0; }
+.gl-wk { font-size: .72rem; font-weight: 650; color: var(--muted); white-space: nowrap; }
+.gl-more summary { cursor: pointer; color: var(--blue); font-weight: 650; font-size: .88rem; margin-top: 6px; min-height: 32px; display: flex; align-items: center; }
+.gl-around { margin-top: 12px; padding: 10px 14px; border-radius: 12px; background: var(--sky-tint); }
+.gl-ah { margin: 0; font-size: .82rem; font-weight: 700; color: var(--blue); }
 .wstrip { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 5px; margin-top: 10px; }
 .wcell { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 5px 2px 6px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); font-variant-numeric: tabular-nums; position: relative; }
 .wcell .wk { font-size: .68rem; color: var(--muted); font-weight: 650; }
@@ -708,6 +721,7 @@ body.pc-open { overflow: hidden; }
     <a href="#land">The Promised Land</a>
     <a href="#prophets">Prophecy Check</a>
     <a href="#work">The Laborers</a>
+    <a href="#glean">Gleanings</a>
     <a href="#moves">Waiver Wire</a>
     <a href="#draft">Draft Day</a>
     <a href="#members">Members</a>
@@ -728,6 +742,7 @@ body.pc-open { overflow: hidden; }
   <a href="#gifts">Spiritual Gifts <span>Your team, position by position</span></a>
   <a href="#prophets">Prophecy Check <span>Projections against what happened</span></a>
   <a href="#work">The Laborers <span>Usage, target trees, backfields</span></a>
+  <a href="#glean">Gleanings <span>Notes on your players</span></a>
   <a href="#moves">Waiver Wire <span>Pickups, drops, and timing</span></a>
   <a href="#draft">Draft Day <span>Steals and misses</span></a>
   <p class="sheet-h">The congregation</p>

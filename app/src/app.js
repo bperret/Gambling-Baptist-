@@ -1,5 +1,5 @@
 
-const DYK_SEED = 62;
+const DYK_SEED = 63;
 // 2026 NFL regular season, weeks 1 to 17, away@home (nflverse schedule; Rams as LAR to match Sleeper). Exodus reads opponents from here.
 const NFL26 = {"1":"NE@SEA SF@LAR CHI@CAR TB@CIN NO@DET BUF@HOU BAL@IND CLE@JAX ATL@PIT NYJ@TEN ARI@LAC MIA@LV GB@MIN WAS@PHI DAL@NYG DEN@KC","2":"DET@BUF CAR@ATL NO@BAL MIN@CHI CIN@HOU PIT@NE GB@NYJ CLE@TB PHI@TEN JAX@DEN LV@LAC SEA@ARI WAS@DAL MIA@SF IND@KC NYG@LAR","3":"ATL@GB LAC@BUF CAR@CLE NYJ@DET HOU@IND NE@JAX KC@MIA TEN@NYG CIN@PIT SEA@WAS ARI@SF MIN@TB BAL@DAL LV@NO LAR@DEN PHI@CHI","4":"PIT@CLE IND@WAS TEN@BAL NE@BUF NYJ@CHI JAX@CIN DAL@HOU ARI@NYG LAR@PHI GB@TB MIA@MIN KC@LV LAC@SEA DEN@SF DET@CAR ATL@NO","5":"TB@DAL PHI@JAX CHI@GB CIN@MIA LV@NE MIN@NO CLE@NYJ IND@PIT HOU@TEN NYG@WAS DEN@LAC DET@ARI SF@SEA BAL@ATL BUF@LAR","6":"SEA@DEN HOU@JAX CHI@ATL BAL@CLE TEN@IND NYJ@NE NO@NYG CAR@PHI PIT@TB ARI@LAR LAC@KC BUF@LV DAL@GB WAS@SF","7":"NE@CHI PIT@NO SF@ATL CIN@BAL TB@CAR NYG@HOU IND@MIN MIA@NYJ CLE@TEN DEN@ARI GB@DET LAR@LV KC@SEA DAL@PHI","8":"CAR@GB BAL@BUF TEN@CIN ARI@DAL MIN@DET IND@JAX LV@NYJ CLE@PIT ATL@TB LAC@LAR KC@DEN NE@MIA PHI@WAS CHI@SEA","9":"JAX@BAL CIN@ATL DEN@CAR DAL@IND NYJ@KC DET@MIA CLE@NO NYG@PHI LAR@WAS HOU@LAC GB@NE ARI@SEA LV@SF TB@CHI BUF@MIN","10":"WAS@NYG NE@DET KC@ATL HOU@CLE MIN@GB MIA@IND CAR@NO BUF@NYJ JAX@TEN LAR@ARI SEA@LV SF@DAL PIT@CIN LAC@BAL","11":"IND@HOU MIA@BUF BAL@CAR NO@CHI TEN@DAL TB@DET ARI@KC JAX@NYG NYJ@LAC LV@DEN PIT@PHI MIN@SF CIN@WAS","12":"GB@LAR CHI@DET PHI@DAL KC@BUF DEN@PIT NO@CIN BAL@HOU NYG@IND TEN@JAX NYJ@MIA ATL@MIN NE@LAC WAS@ARI SEA@SF LV@CLE CAR@TB","13":"KC@LAR DET@ATL JAX@CHI CIN@CLE GB@NO SF@NYG LAC@TB WAS@TEN PHI@ARI MIA@DEN CAR@MIN BUF@NE HOU@PIT DAL@SEA","14":"MIN@NE TB@BAL NO@CAR ATL@CLE TEN@DET CHI@MIA DEN@NYJ IND@PHI HOU@WAS LAC@LV KC@CIN NYG@SEA LAR@SF BUF@GB PIT@JAX","15":"SF@LAC SEA@PHI CHI@BUF CIN@CAR MIA@GB JAX@HOU CLE@NYG BAL@PIT NO@TB IND@TEN ATL@WAS NYJ@ARI DAL@LAR DEN@LV DET@MIN NE@KC","16":"HOU@PHI GB@CHI BUF@DEN LAR@SEA TB@ATL CLE@BAL CIN@IND LAC@MIA WAS@MIN ARI@NO NE@NYJ CAR@PIT TEN@LV SF@KC JAX@DAL NYG@DET","17":"BAL@CIN NO@ATL SEA@CAR IND@CLE NYG@DAL WAS@JAX KC@LAC BUF@MIA DEN@NE MIN@NYJ LAR@TB PIT@TEN LV@ARI DET@CHI PHI@SF HOU@GB"};
 // League model built from the export file. Pure functions, no DOM.
@@ -1743,8 +1743,8 @@ function wTeam(W, tm) {
   const signInt = n => (n > 0 ? "+" : n < 0 ? "−" : "") + Math.round(Math.abs(n)).toLocaleString();
   const rec = r => r.w + "-" + r.l + (r.t ? "-" + r.t : "");
   const ordinal = n => n + (["th", "st", "nd", "rd"][(n % 100 - 20) % 10] || ["th", "st", "nd", "rd"][n % 100] || "th");
-  const views = ["home", "vigil", "land", "standings", "pews", "week", "rivals", "members", "history", "draft", "moves", "trades", "chart", "advisor", "gifts", "prophets", "work"];
-  const moreViews = ["pews", "land", "members", "history", "draft", "moves", "rivals", "gifts", "prophets", "work"];
+  const views = ["home", "vigil", "land", "standings", "pews", "week", "rivals", "members", "history", "draft", "moves", "trades", "chart", "advisor", "gifts", "prophets", "work", "glean"];
+  const moreViews = ["pews", "land", "members", "history", "draft", "moves", "rivals", "gifts", "prophets", "work", "glean"];
   const deskViews = ["advisor", "chart", "trades"];
   const st = { model: null, year: null, week: null, rival: null, rivalB: null, rivalScope: "all", apScope: null, tradeScope: "all", withPO: false, standView: "final", member: null, goto: null, me: null, wireKind: "pickups", wireScope: "all", wireMode: "share", wireBar: "avg", values: null, tv: null, chartPos: "all", prView: "acts", gWeek: null, gView: "position", gTeam: null, gCache: {}, ppCache: {}, stakeCache: {}, dCache: {}, scaleCache: {}, prayAll: false, multi: null, mtPick: "", mtTo: "", mtSel: null, mtPair: true, mtLock: new Set(), mtRes: null, chartOpen: null, trade: { a: null, b: null, aGets: [], bGets: [] }, ideasFor: null, ideaCache: {} };
   const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} } };
@@ -2210,18 +2210,83 @@ function wTeam(W, tm) {
       climb && tile("high", "Revival Meeting", "+" + f2(climb.d), esc(teamIn(climb.uid, s)), "Biggest jump from last week")].filter(Boolean).slice(0, 12);
   }
 
-  /* ---------- Testimonies: outside player notes, latest week only ---------- */
+  /* ---------- Gleanings: outside player notes, latest edition of each source, never credited ----------
+     notes.json: { season, items: [{ pid, wk, tag, tone, text, src }], teams: [{ team, wk, tone, text, src }] }.
+     src says which feed a line came from, only so a new edition can replace its own lines; it is never shown.
+     The old one-source shape ({ week, notes }) still loads. */
   const NOTE_TAG = { call: ["New Calling", "t-up"], pew: ["Back Pew", "t-down"], manna: ["Manna", ""], fast: ["Fasting", ""] };
-  const noteList = () => ((st.notes && st.notes.notes) || []);
-  const noteTag = n => { const t = NOTE_TAG[n.tag]; return t ? `<span class="tag ${t[1]}">${esc(t[0])}</span>` : ""; };
-  const noteSource = () => st.notes ? `Week ${esc(st.notes.week)}, per ${esc(st.notes.source)}.` : "";
-  function testimonyTile(s) {
-    const ros = s.currentRosters || {}, on = pid => Object.values(ros).some(r => r.includes(pid));
-    const all = noteList().filter(n => on(n.pid)); if (!all.length) return "";
+  function glData() {
+    if (st.glCache) return st.glCache;
+    const N = st.notes || {};
+    const items = (Array.isArray(N.items) ? N.items : (N.notes || []).map(x => ({ pid: x.pid, wk: N.week, tag: x.tag, text: x.text }))).filter(x => x && x.pid && x.text);
+    const teams = (Array.isArray(N.teams) ? N.teams : []).filter(x => x && x.team && x.text);
+    const byPid = {}; items.forEach(x => { (byPid[x.pid] = byPid[x.pid] || []).push(x); });
+    const byTeam = {}; teams.forEach(x => { (byTeam[x.team] = byTeam[x.team] || []).push(x); });
+    return (st.glCache = { items, teams, byPid, byTeam });
+  }
+  const noteList = () => glData().items;
+  const glTone = n => n.tone || (n.tag === "call" ? "up" : n.tag === "pew" ? "down" : "");
+  const noteTag = n => { const t = NOTE_TAG[n.tag]; return t ? `<span class="tag ${t[1]}">${esc(t[0])}</span> ` : ""; };
+  // Numbers in bold; week numbers stay plain
+  const glText = t => { let out = "", last = 0; String(t).replace(/(\b(?:Weeks?|Wk) )?(\d[\d,]*(?:\.\d+)?(?:%|st\b|nd\b|rd\b|th\b)?)/g, (m, pre, num, at) => { if (!pre) { out += esc(String(t).slice(last, at)) + `<b>${esc(num)}</b>`; last = at + m.length; } return m; }); return out + esc(String(t).slice(last)); };
+  const glLine = n => `<p class="gl-line ${glTone(n)}">${noteTag(n)}${glText(n.text)}${n.wk ? ` <span class="gl-wk">Wk ${esc(n.wk)}</span>` : ""}</p>`;
+  const glNflTeam = pid => { const p = st.model.players[pid]; return p ? (p[1] === "DEF" ? pid : p[2]) : ""; };
+  const glSeed = () => (typeof DYK_SEED === "number" ? DYK_SEED : 0) + ((st.raw && st.raw.dykBump) || 0);
+  function gleaningsTile(s) {
+    const ros = s.currentRosters || {}, D = glData(), on = pid => Object.values(ros).some(r => r.includes(pid));
+    const all = D.items.filter(n => on(n.pid)); if (!all.length) return "";
     const mine = st.me && ros[st.me] ? all.filter(n => ros[st.me].includes(n.pid)) : [];
-    const pool = mine.length ? mine : all, k = (typeof DYK_SEED === "number" ? DYK_SEED : 0) + ((st.raw && st.raw.dykBump) || 0);
-    const n = pool[k % pool.length];
-    return `<div class="didyou"><span class="dk">${mine.length ? "A testimony from your roster" : "Testimony"}</span><span class="dt">${pn(n.pid, s.pinfo(n.pid)[0])}${noteTag(n)} ${esc(n.text)}</span><span class="fine">${noteSource()}</span></div>`;
+    const pool = mine.length ? mine : all, k = glSeed(), pick = [];
+    for (let i = 0; i < pool.length && pick.length < (mine.length ? 3 : 2); i++) { const n = pool[(k + i) % pool.length]; if (!pick.some(x => x.pid === n.pid)) pick.push(n); }
+    return `<div class="didyou gl-tile"><span class="dk">${mine.length ? "Your Gleanings" : "Gleanings"}</span>${pick.map(n => `<div class="gl-line ${glTone(n)}"><b>${pn(n.pid, s.pinfo(n.pid)[0])}</b> ${noteTag(n)}${glText(n.text)}</div>`).join("")}<div><button type="button" class="go-btn" data-go="glean" data-sec="">${mine.length ? "All your gleanings" : "See the gleanings"}</button></div></div>`;
+  }
+  // This week's lineup and opponent, from the export's in-progress week when it is the next week up
+  function glWeek(s) {
+    const L = st.raw && st.raw.live, next = (s.regWeeks[s.regWeeks.length - 1] || 0) + 1;
+    const out = { starters: {}, opp: {}, week: next };
+    if (L && Array.isArray(L.rows) && +L.week === next) {
+      const uidOf = rid => s.rosterOwner[rid], byM = {};
+      L.rows.forEach(r => { const u = uidOf(r.roster_id); if (!u) return; out.starters[u] = (r.starters || []).filter(p => p && p !== "0"); if (r.matchup_id != null) (byM[r.matchup_id] = byM[r.matchup_id] || []).push(u); });
+      Object.values(byM).forEach(pr => { if (pr.length === 2) { out.opp[pr[0]] = pr[1]; out.opp[pr[1]] = pr[0]; } });
+    }
+    if (!Object.keys(out.opp).length && !s.complete) {
+      const sd = stakesData(s); if (sd) { out.week = sd.week; sd.games.forEach(g => { out.opp[g.a] = g.b; out.opp[g.b] = g.a; }); }
+    }
+    return out;
+  }
+  function glCard(s, pid, starter) {
+    const D = glData(), ns = D.byPid[pid] || [], p = st.model.players[pid] || [s.pinfo(pid)[0], "", ""];
+    const shown = ns.slice(0, 3), rest = ns.slice(3);
+    return `<div class="gl-card"><div class="gl-h"><b>${pn(pid, p[0])}</b>${injChip(pid)} <span class="muted sm">${esc(p[1])}${p[2] ? " · " + esc(p[2]) : ""}${starter == null ? "" : starter ? " · Starter" : " · Bench"}</span></div>${shown.map(glLine).join("")}${rest.length ? `<details class="gl-more"><summary>+${rest.length} more</summary>${rest.map(glLine).join("")}</details>` : ""}</div>`;
+  }
+  function glRoster(s, uid, W) {
+    const D = glData(), ros = s.currentRosters[uid] || [], st0 = W.starters[uid] || [];
+    const have = ros.filter(pid => D.byPid[pid]);
+    const order = have.slice().sort((a, b) => { const ia = st0.indexOf(a), ib = st0.indexOf(b); if ((ia < 0) !== (ib < 0)) return ia < 0 ? 1 : -1; if (ia >= 0) return ia - ib; return D.byPid[b].length - D.byPid[a].length || String((st.model.players[a] || [""])[0]).localeCompare(String((st.model.players[b] || [""])[0])); });
+    const known = st0.length > 0;
+    let h = order.map(pid => glCard(s, pid, known ? st0.includes(pid) : null)).join("");
+    const teams = [...new Set(ros.map(glNflTeam).filter(t => D.byTeam[t]))].sort();
+    if (teams.length) h += `<div class="gl-around"><p class="gl-ah">Around your teams</p>${teams.map(t => D.byTeam[t].map(n => `<p class="gl-line ${glTone(n)}"><b>${esc(nfl(t))}.</b> ${glText(n.text)}${n.wk ? ` <span class="gl-wk">Wk ${esc(n.wk)}</span>` : ""}</p>`).join("")).join("")}</div>`;
+    return { h, n: order.length };
+  }
+  function glean() {
+    const s = st.model.latest, D = glData();
+    let h = sec("Gleanings", "Let me go to the field and glean. Ruth 2:2. Notes on your players, gathered from around the league.");
+    if (!D.items.length) return h + `<p class="empty">No notes are loaded right now.</p>`;
+    const me = st.me && s.uids.includes(st.me) ? st.me : null;
+    const scope = st.glScope || (me ? "mine" : "all");
+    h += `<div class="chips wrap" role="group" aria-label="Whose players">${[["mine", "Your team"], ["opp", "This week's opponent"], ["all", "Whole league"]].map(([k, l]) => `<button data-glscope="${k}" aria-pressed="${scope === k}">${l}</button>`).join("")}</div>`;
+    const W = glWeek(s);
+    if ((scope === "mine" || scope === "opp") && !me) return h + `<section class="me-pick"><b>Who are you?</b><span class="muted sm">Pick your name to see notes on your players.</span><div class="chips wrap">${activeOwners().filter(o => s.uids.includes(o.uid)).map(o => `<button data-me="${esc(o.uid)}">${esc(o.name)}</button>`).join("")}</div></section>`;
+    const block = (uid, label) => { const r = glRoster(s, uid, W); return `<h3>${label}</h3><p class="muted sm">${r.n ? `${r.n} ${r.n === 1 ? "player" : "players"} with notes` : "No notes on these players this week."}</p>${r.h}`; };
+    if (scope === "mine") return h + block(me, `${esc(teamIn(me, s))} <span class="muted">${esc(ownerName(me))}</span>`);
+    if (scope === "opp") {
+      const o = W.opp[me];
+      if (!o) return h + `<p class="empty">No opponent on the schedule this week.</p>`;
+      return h + block(o, `Week ${esc(W.week)}: ${esc(teamIn(o, s))} <span class="muted">${esc(ownerName(o))}</span>`);
+    }
+    const order = s.standings.map(r => r.uid).filter(u => s.currentRosters[u]);
+    return h + order.map(u => block(u, `${esc(teamIn(u, s))} <span class="muted">${esc(ownerName(u))}</span>`)).join("");
   }
 
   /* ---------- Home: the 30-second front door ---------- */
@@ -2234,7 +2299,7 @@ function wTeam(W, tm) {
     h += `<section class="hero share"><div class="share-top"><span class="share-brand">Gambling Baptist</span><span class="share-wk">${esc(s.year)} · Week ${w}</span></div><p class="hero-k">${preach.kicker}</p><h2 class="hero-h st">${preach.title}</h2><ol class="sermon">${lines.map(l => `<li>${l}</li>`).join("")}</ol>${preach.benediction ? `<p class="sermon-ben"><span class="sl">Benediction</span>${preach.benediction}</p>` : ""}<p class="share-hint">Screenshot this card and post it in GroupMe.</p>${goBtn("week", "Tuesday Recap")}Read the full recap</button></section>`;
     const rec0 = recordOfWeek();
     if (rec0) h += `<div class="didyou"><span class="dk">Did you know</span><span class="dt">${rec0}</span></div>`;
-    h += testimonyTile(s);
+    h += gleaningsTile(s);
     { const sd = !s.complete ? stakesData(s) : null; if (sd && sd.games.length) { h += `<section class="gotw"><h3>The Big Revival · Week ${sd.week}'s game of the week</h3><p class="muted sm">The matchup that moves the playoff odds most.</p>${stakeCard(sd.games[0], sd.pp, true)}<button type="button" class="go-btn" data-go="standings" data-sec="What's at Stake">Every game's stakes</button></section>`; } }
 
     // Trophy race and lid watch
@@ -3275,7 +3340,8 @@ function wTeam(W, tm) {
     const own = Object.entries(L0.currentRosters || {}).find(([, r]) => r.includes(pid));
     const inj = st.model.injuries && st.model.injuries[pid];
     let h = `<div class="pc-h"><div><h2 id="pcTitle">${esc(name)}</h2><p class="muted">${[pos, team].filter(Boolean).map(esc).join(" · ")}${pos || team ? " · " : ""}${own ? `${esc(ownerName(own[0]))}'s roster` : "Free agent"}${inj && inj.s ? ` <span class="inj" title="Sleeper injury status">${esc(inj.s)}</span>` : ""}</p></div><button type="button" class="pc-x" data-pcclose="1" aria-label="Close player card">×</button></div>`;
-    { const ns = noteList().filter(n => n.pid === pid); if (ns.length) h += `<div class="pc-sec"><h3>Testimony</h3>${ns.map(n => `<p class="pc-line">${noteTag(n)} ${esc(n.text)}</p>`).join("")}<p class="fine">${noteSource()}</p></div>`; }
+    { const D = glData(), ns = D.byPid[pid] || [], tm = glNflTeam(pid), tn = (ns.length && D.byTeam[tm]) || [];
+      if (ns.length) h += `<div class="pc-sec"><h3>Gleanings</h3>${ns.map(glLine).join("")}${tn.map(n => `<p class="gl-line ${glTone(n)}"><b>${esc(nfl(tm))}.</b> ${glText(n.text)}${n.wk ? ` <span class="gl-wk">Wk ${esc(n.wk)}</span>` : ""}</p>`).join("")}</div>`; }
     // Trade value
     const e = st.tv && st.tv.cons.byPid[pid];
     if (e) { const tr = tvTier(e.value); h += `<div class="pc-sec"><h3>Trade value</h3><div class="row"><div>${tr ? `Tier ${tr.n} · ${esc(tr.name)}` : ""}<small class="muted pc-sub">Week ${st.tv.week.week} blend</small></div><div class="r">${f1(e.value)}${e.delta != null && Math.abs(e.delta) >= 0.5 ? `<small class="${e.delta > 0 ? "w" : "l"}">${e.delta > 0 ? "▲" : "▼"}${f1(Math.abs(e.delta))} since last week</small>` : ""}</div></div><button type="button" class="linkish" data-pcchart="${esc(e.key)}" data-pcpos="${esc(e.pos)}">Open on the Trade Chart</button>${own && !["K", "DEF"].includes(pos) ? ` <button type="button" class="linkish" data-pcshop="${esc(pid)}" data-pcowner="${esc(own[0])}">Shop this player</button>` : ""}</div>`; }
@@ -4589,10 +4655,10 @@ function wTeam(W, tm) {
     document.querySelectorAll("nav.tabs a, nav.bottom a, .sheet a").forEach(a => { const hv = a.getAttribute("href").slice(1); if (hv === v || (a.dataset.desk && deskViews.includes(v))) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
     if (moreViews.includes(v)) $("moreBtn").setAttribute("aria-current", "page"); else $("moreBtn").removeAttribute("aria-current");
     setSheet(false);
-    $("seasonWrap").hidden = v === "home" || v === "vigil" || v === "land" || v === "chart" || v === "advisor";
+    $("seasonWrap").hidden = v === "home" || v === "vigil" || v === "land" || v === "glean" || v === "chart" || v === "advisor";
     navMarks(v);
     const y = window.scrollY;
-    const fn = { home, vigil, land, standings, pews, week, rivals, members, history, draft, moves, trades, chart, advisor, gifts, prophets, work }[v];
+    const fn = { home, vigil, land, standings, pews, week, rivals, members, history, draft, moves, trades, chart, advisor, gifts, prophets, work, glean }[v];
     const view = $("view"); view.dataset.view = v;
     try { view.innerHTML = fn(); }
     catch (e) { view.innerHTML = `<p class="empty">This page did not load: ${esc(e.message)}. Pick another season or refresh.</p>`; return; }
@@ -4676,6 +4742,7 @@ function wTeam(W, tm) {
     if (b.dataset.gbcancel) { st.pending = null; st.pubMsg = null; render(); return; }
     if (b.dataset.prayall) { st.prayAll = true; render(); return; }
     if (b.dataset.tierjump) { const el = document.getElementById("tier-" + b.dataset.tierjump); if (el) el.scrollIntoView({ block: "start" }); return; }
+    if (b.dataset.glscope) { st.glScope = b.dataset.glscope; store.set("gb-glscope", st.glScope); render(); return; }
     if (b.dataset.exsort) { st.exSort = b.dataset.exsort; render(); return; }
     if (b.dataset.exwk) { st.exWk = +b.dataset.exwk; render(); return; }
     if (b.dataset.prview) { st.prView = b.dataset.prview; store.set("gb-prview", st.prView); render(); return; }
@@ -4815,6 +4882,8 @@ function wTeam(W, tm) {
     st.year = s.year;
     const saved = store.get("gb-me"); if (saved && st.model.owners[saved]) st.me = saved;
     if (store.get("gb-prview") === "rev") st.prView = "rev";
+    { const g = store.get("gb-glscope"); if (["mine", "opp", "all"].includes(g)) st.glScope = g; }
+    st.glCache = null;
     if (st.me) { st.member = st.me; st.rival = st.me; }
     tvInit(raw);
     $("lsub").textContent = `${s.uids.length} teams, full PPR, season ${st.model.seasons.length}`;

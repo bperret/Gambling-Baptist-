@@ -3,6 +3,13 @@
 Shipped changes to the Gambling Baptist app, newest first. Dates are when the change went live. Details live in `HANDOFF.md`; this file says what changed and why.
 History before Nov 18, 2026 was not logged here; see `git log` on `app-source` and the dated rules in `HANDOFF.md`.
 
+## 2026-11-25
+- **Gleanings** (replaces Testimonies). One pool of outside player notes, never credited, filtered to rosters. Page in the More sheet and top tabs (`#glean`) with chips Your team, This week's opponent, Whole league (saved as `gb-glscope`); starters first, then bench; an "Around your teams" block for NFL team notes. Home tile "Your Gleanings" (3 notes from your roster, rotating with Did You Know; 2 league-wide notes when no one is picked). Player card section "Gleanings" with his NFL team's note. Green or red left border for tone; Late-Round tags kept; numbers bold; "Wk N" on each line.
+- `notes.json` is now `{season, items, teams}` with `src` per line (`lr` Late-Round, `nl` newsletter; never shown). The old `{week, notes}` shape still loads.
+- First newsletter load (games through Week 11): 47 player notes, 6 team notes (`tools/nl_2026_w11.py`). Lines that repeated a Late-Round note were merged away (Josh Allen's no-rush game, DJ Moore's full-time split, Olave's target share, Tyson's routes, Downs's route share, Rodgers's air yards). No defenders, no trade or waiver advice, no trivia.
+- New check: `checks/glean.js`.
+- Did You Know rotated (`DYK_SEED` 63).
+
 ## 2026-11-24
 - **Week 12 export** (Sleeper rolled to Week 12, exported 1:23 pm CT). Sleeper's own Week 11 scores match the ones copied in on Nov 23 for all 12 teams. Adds 4 late Week 11 moves and 8 Week 12 pickups, Week 12 projections, and two injury changes (Adam Randall Out, Denzel Boston Questionable). `dykBump` carried over (29).
 - **Testimonies:** Week 11 Late-Round dump loaded, 42 notes on rostered players (10 New Calling, 11 Back Pew, 3 Manna, 5 Fasting, 13 untagged). Replaces the Week 9 set. Every number checked against the PDF text.
